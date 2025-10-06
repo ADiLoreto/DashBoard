@@ -1,11 +1,123 @@
+.date-box {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  justify-content: center;
+  margin-top: 12px;
+  background: var(--bg-medium);
+  border: 2px solid var(--text-light);
+  border-radius: 18px;
+  padding: 18px 32px;
+}
+.date-box label {
+  font-size: 22px;
+  color: var(--accent-cyan);
+  font-family: 'Montserrat', sans-serif;
+  margin-right: 12px;
+}
+.date-box select,
+.date-box input[type='date'],
+.date-box select {
+  font-size: 22px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: none;
+  background: var(--bg-dark);
+  color: var(--text-light) !important;
+  font-family: 'Roboto Mono', monospace;
+  margin-right: 24px;
+}
+.date-box .save-date {
+  font-size: 22px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: none;
+  background: var(--bg-dark);
+  color: var(--text-light);
+  font-family: 'Roboto Mono', monospace;
+  margin-right: 24px;
+}
+.topbar-dates {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  justify-content: center;
+  margin-top: 12px;
+}
+.topbar-dates label {
+  font-size: 22px;
+  color: var(--text-light);
+  font-family: 'Montserrat', sans-serif;
+  margin-right: 12px;
+}
+.topbar-dates select,
+.topbar-dates input[type='date'] {
+  font-size: 22px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: none;
+  background: var(--bg-light);
+  color: var(--text-light);
+  font-family: 'Roboto Mono', monospace;
+  margin-right: 24px;
+}
+
+/* date field: label above and visible porcelain box for the date */
+.date-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* center label and input */
+  gap: 6px;
+}
+.date-field label {
+  font-size: 16px;
+  color: var(--accent-blue);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  text-align: center;
+  width: 100%;
+}
+.date-field input[type='date'] {
+  background: var(--bg-light);
+  color: var(--bg-dark) !important;
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  min-width: 180px;
+}
+
+.today-btn {
+  background: var(--accent-cyan);
+  color: var(--bg-dark);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.date-field > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.date-field > div input[type='date'] {
+  /* ensure inside grouped div keeps same size */
+  min-width: 160px;
+}
 :root {
   --bg-dark: #1E2329;
   --bg-darker: #15181E;
   --bg-medium: #2A2F36;
+  --bg-light: #ebeeef; /* Porcelain */
   --text-light: #FFFFFF;
   --text-gray: #B0B0B0;
   --text-muted: #888888;
   --accent-cyan: #00D1FF;
+  --accent-blue: #06a3b8; /* Eastern Blue */
 }
 body {
   background-color: var(--bg-dark);
