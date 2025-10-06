@@ -30,34 +30,38 @@ const AssetPatrimonio = () => {
   // Esempio: aggiungi logica per altri asset
 
   return (
-    <div>
-      <h2 style={{ color: COLORS.text }}>Totale Patrimonio: <span style={{ color: COLORS.primary }}>{totalePatrimonio} €</span></h2>
-      <PieChart width={400} height={300}>
-        <Pie
-          data={pieData}
-          dataKey="value"
-          nameKey="name"
-          cx="50%"
-          cy="50%"
-          outerRadius={100}
-          label
-        >
-          {pieData.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={COLORS.primary} />
-          ))}
-        </Pie>
-        <Tooltip />
-        <Legend />
-      </PieChart>
-      <EditableCard
-        title="Conti Deposito"
-        value={pieData[1].value}
-        unit="€"
-        fields={["saldo"]}
-        onSave={handleAddContoDeposito}
-        expandable={true}
-      />
-      {/* Altri EditableCard per Azioni, ETF, Crypto, Oro... */}
+    <div style={{ margin: '24px 0' }}>
+      <div className="chart-title">Totale Patrimonio: <span style={{ color: 'var(--accent-cyan)' }}>{totalePatrimonio} €</span></div>
+      <div className="chart-container">
+        <PieChart width={400} height={300}>
+          <Pie
+            data={pieData}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            outerRadius={100}
+            label
+          >
+            {pieData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill="var(--accent-cyan)" />
+            ))}
+          </Pie>
+          <Tooltip />
+          <Legend />
+        </PieChart>
+      </div>
+      <div className="kpi-container">
+        <EditableCard
+          title="Conti Deposito"
+          value={pieData[1].value}
+          unit="€"
+          fields={["saldo"]}
+          onSave={handleAddContoDeposito}
+          expandable={true}
+        />
+        {/* Altri EditableCard per Azioni, ETF, Crypto, Oro... */}
+      </div>
     </div>
   );
 };

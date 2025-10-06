@@ -10,16 +10,20 @@ const tabs = [
 ];
 
 const Sidebar = ({ onSelect, selected }) => (
-  <aside style={{ width: 220, background: '#2e3842', color: '#f6f9fc', padding: 24 }}>
-    <h2 style={{ color: '#06d2fa' }}>Dashboard</h2>
-    <ul style={{ listStyle: 'none', padding: 0 }}>
+  <aside className="sidebar">
+    <h2>Dashboard</h2>
+    <nav>
       {tabs.map(tab => (
-        <li key={tab} style={{ margin: '18px 0', cursor: 'pointer', fontWeight: selected === tab ? 'bold' : 'normal', borderLeft: selected === tab ? '4px solid #06d2fa' : 'none', paddingLeft: 12 }}
-            onClick={() => onSelect && onSelect(tab)}>
+        <a
+          key={tab}
+          href="#"
+          style={{ fontWeight: selected === tab ? 'bold' : 'normal', borderLeft: selected === tab ? '4px solid var(--accent-cyan)' : 'none', paddingLeft: 12 }}
+          onClick={e => { e.preventDefault(); onSelect && onSelect(tab); }}
+        >
           {tab}
-        </li>
+        </a>
       ))}
-    </ul>
+    </nav>
   </aside>
 );
 
