@@ -250,21 +250,23 @@ const AssetPatrimonio = () => {
                 }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                  <h3 onClick={() => toggleCard(key)} style={{ color: 'var(--bg-light)', margin: 0, cursor: 'pointer' }}>Conti Deposito</h3>
-                  <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6 }}>{formatCurrency(conti.reduce((s,c)=>s+Number(c.saldo||0),0), currency)}</div>
-                  <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 10, marginBottom: 2 }}>
-                    <DonutChart items={conti} getValue={c => Number(c.saldo || 0)} size={40} responsive={true} />
+                  <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                    <h3 onClick={() => toggleCard(key)} style={{ color: 'var(--bg-light)', margin: 0, cursor: 'pointer', textAlign: 'center', fontSize: 22, fontWeight: 700 }}>Conti Deposito</h3>
+                    <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6, textAlign: 'center', fontSize: 20 }}>{formatCurrency(conti.reduce((s,c)=>s+Number(c.saldo||0),0), currency)}</div>
+                  </div>
+                  <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 12 }}>
+                    <DonutChart items={conti} getValue={c => Number(c.saldo || 0)} size={240} responsive={false} />
                   </div>
                 </div>
 
                 {/* entries - only visible when open */}
         <div style={{ marginTop: 12, display: open ? 'flex' : 'none', flexDirection: 'column', gap: 12, overflowY: 'auto', paddingBottom: 8 }}>
                   {/* ...DonutChart rimosso dalla sezione espansa... */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start', justifyContent: 'center' }}>
                     {conti.map(c => (
                       <BigTab key={c.id} title={c.titolo || c.name || 'Conto'} value={formatCurrency(Number(c.saldo||0), currency)} onClick={() => openEditConto(c)} />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => setShowAddModal(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36, alignSelf: 'flex-start' }}>
+                    <div className="big-tab add-tab" onClick={() => setShowAddModal(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -284,19 +286,21 @@ const AssetPatrimonio = () => {
                 style={{ background: 'var(--bg-medium)', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, minHeight: open ? 320 : undefined, aspectRatio: open ? undefined : '1 / 1', transition: 'min-height 220ms ease, aspect-ratio 220ms ease' }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                  <h3 onClick={() => toggleCard(key)} style={{ color: 'var(--bg-light)', margin: 0, cursor: 'pointer' }}>Buoni / Titoli</h3>
-                  <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6 }}>{formatCurrency(buoni.reduce((s,b)=>s+getValue(b),0), currency)}</div>
-                  <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 10, marginBottom: 2 }}>
-                    <DonutChart items={buoni} getValue={getValue} size={40} responsive={true} />
+                  <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                    <h3 onClick={() => toggleCard(key)} style={{ color: 'var(--bg-light)', margin: 0, cursor: 'pointer', textAlign: 'center', fontSize: 22, fontWeight: 700 }}>Buoni / Titoli</h3>
+                    <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6, textAlign: 'center', fontSize: 20 }}>{formatCurrency(buoni.reduce((s,b)=>s+getValue(b),0), currency)}</div>
+                  </div>
+                  <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 12 }}>
+                    <DonutChart items={buoni} getValue={getValue} size={240} responsive={false} />
                   </div>
                 </div>
                 <div style={{ marginTop: 12, display: open ? 'flex' : 'none', flexDirection: 'column', gap: 12, overflowY: 'auto', paddingBottom: 8 }}>
                   {/* ...DonutChart rimosso dalla sezione espansa... */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
                     {buoni.map(b => (
                       <BigTab key={b.id} title={b.titolo || b.name || 'Buono'} value={formatCurrency(getValue(b), currency)} onClick={() => openEditBuono(b)} />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => setShowAddBuono(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36, alignSelf: 'flex-start' }}>
+                    <div className="big-tab add-tab" onClick={() => setShowAddBuono(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -316,19 +320,21 @@ const AssetPatrimonio = () => {
                 style={{ background: 'var(--bg-medium)', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, minHeight: open ? 320 : undefined, aspectRatio: open ? undefined : '1 / 1', transition: 'min-height 220ms ease, aspect-ratio 220ms ease' }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                  <h3 onClick={() => toggleCard(key)} style={{ color: 'var(--bg-light)', margin: 0, cursor: 'pointer' }}>Azioni</h3>
-                  <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6 }}>{formatCurrency(azioni.reduce((s,a)=>s+getValue(a),0), currency)}</div>
-                  <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 10, marginBottom: 2 }}>
-                    <DonutChart items={azioni} getValue={getValue} size={40} responsive={true} />
+                  <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                    <h3 onClick={() => toggleCard(key)} style={{ color: 'var(--bg-light)', margin: 0, cursor: 'pointer', textAlign: 'center', fontSize: 22, fontWeight: 700 }}>Azioni</h3>
+                    <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6, textAlign: 'center', fontSize: 20 }}>{formatCurrency(azioni.reduce((s,a)=>s+getValue(a),0), currency)}</div>
+                  </div>
+                  <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 12 }}>
+                    <DonutChart items={azioni} getValue={getValue} size={240} responsive={false} />
                   </div>
                 </div>
                 <div style={{ marginTop: 12, display: open ? 'flex' : 'none', flexDirection: 'column', gap: 12, overflowY: 'auto', paddingBottom: 8 }}>
                   {/* ...DonutChart rimosso dalla sezione espansa... */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
                     {azioni.map(a => (
                       <BigTab key={a.id} title={a.titolo || a.name || 'Azione'} value={formatCurrency(getValue(a), currency)} onClick={() => openEditAzione(a)} />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => setShowAddAzione(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36, alignSelf: 'flex-start' }}>
+                    <div className="big-tab add-tab" onClick={() => setShowAddAzione(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -347,19 +353,21 @@ const AssetPatrimonio = () => {
                 style={{ background: 'var(--bg-medium)', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, minHeight: open ? 320 : undefined, aspectRatio: open ? undefined : '1 / 1', transition: 'min-height 220ms ease, aspect-ratio 220ms ease' }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                  <h3 onClick={() => toggleCard(key)} style={{ color: 'var(--bg-light)', margin: 0, cursor: 'pointer' }}>ETF</h3>
-                  <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6 }}>{formatCurrency(etf.reduce((s,e)=>s+getValue(e),0), currency)}</div>
-                  <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 10, marginBottom: 2 }}>
-                    <DonutChart items={etf} getValue={getValue} size={40} responsive={true} />
+                  <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                    <h3 onClick={() => toggleCard(key)} style={{ color: 'var(--bg-light)', margin: 0, cursor: 'pointer', textAlign: 'center', fontSize: 22, fontWeight: 700 }}>ETF</h3>
+                    <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6, textAlign: 'center', fontSize: 20 }}>{formatCurrency(etf.reduce((s,e)=>s+getValue(e),0), currency)}</div>
+                  </div>
+                  <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 12 }}>
+                    <DonutChart items={etf} getValue={getValue} size={240} responsive={false} />
                   </div>
                 </div>
                 <div style={{ marginTop: 12, display: open ? 'flex' : 'none', flexDirection: 'column', gap: 12, overflowY: 'auto', paddingBottom: 8 }}>
                   {/* ...DonutChart rimosso dalla sezione espansa... */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
                     {etf.map(e => (
                       <BigTab key={e.id} title={e.titolo || e.name || 'ETF'} value={formatCurrency(getValue(e), currency)} onClick={() => openEditEtf(e)} />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => setShowAddEtf(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36, alignSelf: 'flex-start' }}>
+                    <div className="big-tab add-tab" onClick={() => setShowAddEtf(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -378,19 +386,21 @@ const AssetPatrimonio = () => {
                 style={{ background: 'var(--bg-medium)', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, minHeight: open ? 320 : undefined, aspectRatio: open ? undefined : '1 / 1', transition: 'min-height 220ms ease, aspect-ratio 220ms ease' }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                  <h3 onClick={() => toggleCard(key)} style={{ color: 'var(--bg-light)', margin: 0, cursor: 'pointer' }}>Crypto</h3>
-                  <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6 }}>{formatCurrency(crypto.reduce((s,c)=>s+getValue(c),0), currency)}</div>
-                  <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 10, marginBottom: 2 }}>
-                    <DonutChart items={crypto} getValue={getValue} size={40} responsive={true} />
+                  <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                    <h3 onClick={() => toggleCard(key)} style={{ color: 'var(--bg-light)', margin: 0, cursor: 'pointer', textAlign: 'center', fontSize: 22, fontWeight: 700 }}>Crypto</h3>
+                    <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6, textAlign: 'center', fontSize: 20 }}>{formatCurrency(crypto.reduce((s,c)=>s+getValue(c),0), currency)}</div>
+                  </div>
+                  <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 12 }}>
+                    <DonutChart items={crypto} getValue={getValue} size={240} responsive={false} />
                   </div>
                 </div>
                 <div style={{ marginTop: 12, display: open ? 'flex' : 'none', flexDirection: 'column', gap: 12, overflowY: 'auto', paddingBottom: 8 }}>
                   {/* ...DonutChart rimosso dalla sezione espansa... */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
                     {crypto.map(c => (
                       <BigTab key={c.id} title={c.titolo || c.name || 'Crypto'} value={formatCurrency(getValue(c), currency)} onClick={() => openEditCrypto(c)} />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => setShowAddCrypto(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36, alignSelf: 'flex-start' }}>
+                    <div className="big-tab add-tab" onClick={() => setShowAddCrypto(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -409,19 +419,21 @@ const AssetPatrimonio = () => {
                 style={{ background: 'var(--bg-medium)', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, minHeight: open ? 320 : undefined, aspectRatio: open ? undefined : '1 / 1', transition: 'min-height 220ms ease, aspect-ratio 220ms ease' }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                  <h3 onClick={() => toggleCard(key)} style={{ color: 'var(--bg-light)', margin: 0, cursor: 'pointer' }}>Materiali preziosi</h3>
-                  <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6 }}>{formatCurrency(oro.reduce((s,o)=>s+getValue(o),0), currency)}</div>
-                  <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 10, marginBottom: 2 }}>
-                    <DonutChart items={oro} getValue={getValue} size={40} responsive={true} />
+                  <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                    <h3 onClick={() => toggleCard(key)} style={{ color: 'var(--bg-light)', margin: 0, cursor: 'pointer', textAlign: 'center', fontSize: 22, fontWeight: 700 }}>Materiali preziosi</h3>
+                    <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6, textAlign: 'center', fontSize: 20 }}>{formatCurrency(oro.reduce((s,o)=>s+getValue(o),0), currency)}</div>
+                  </div>
+                  <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 12 }}>
+                    <DonutChart items={oro} getValue={getValue} size={240} responsive={false} />
                   </div>
                 </div>
                 <div style={{ marginTop: 12, display: open ? 'flex' : 'none', flexDirection: 'column', gap: 12, overflowY: 'auto', paddingBottom: 8 }}>
                   {/* ...DonutChart rimosso dalla sezione espansa... */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
                     {oro.map(o => (
                       <BigTab key={o.id} title={o.titolo || o.name || 'Oro'} value={formatCurrency(getValue(o), currency)} onClick={() => openEditOro(o)} />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => setShowAddOro(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36, alignSelf: 'flex-start' }}>
+                    <div className="big-tab add-tab" onClick={() => setShowAddOro(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
