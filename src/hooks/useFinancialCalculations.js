@@ -12,8 +12,9 @@ export const useFinancialCalculations = () => {
 
   const totalePatrimonio = useMemo(() => {
     return state.patrimonio.tfr +
-           state.patrimonio.contiDeposito.reduce((sum, c) => sum + c.saldo, 0) +
-           state.patrimonio.investimenti.azioni.reduce((sum, i) => sum + i.valore, 0);
+           (state.patrimonio.contiDeposito || []).reduce((sum, c) => sum + (c.saldo || 0), 0) +
+           (state.patrimonio.buoniTitoli || []).reduce((sum, b) => sum + (b.importo || 0), 0) +
+           (state.patrimonio.investimenti.azioni || []).reduce((sum, i) => sum + (i.valore || 0), 0);
     // ...aggiungere ETF, crypto, oro
   }, [state.patrimonio]);
 
