@@ -8,12 +8,13 @@ import './App.css';
 
 const AppInner = () => {
   const { user } = useContext(AuthContext);
+  const [activeSection, setActiveSection] = React.useState(null);
   if (!user) return <Login />;
   return (
     <FinanceProvider>
       <div style={{ display: 'flex', background: '#28323c', minHeight: '100vh' }}>
-        <Sidebar />
-        <Dashboard />
+        <Sidebar onSelect={setActiveSection} selected={activeSection} />
+        <Dashboard activeSection={activeSection} setActiveSection={setActiveSection} />
       </div>
     </FinanceProvider>
   );

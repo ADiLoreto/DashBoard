@@ -6,12 +6,13 @@ import Stipendio from '../sections/EntrateAttuali/Stipendio';
 import AssetPatrimonio from '../sections/AssetPatrimonio/AssetPatrimonio';
 import Uscite from '../sections/Uscite/Uscite';
 import { useFinancialCalculations } from '../../hooks/useFinancialCalculations';
+import { formatCurrency, getUserCurrency } from '../../utils/format';
 
-const Dashboard = () => {
+const Dashboard = (props) => {
+  const { activeSection, setActiveSection } = props;
   const { user } = useContext(AuthContext);
   const username = user?.username;
   const [showDraftMsg, setShowDraftMsg] = useState(!!loadDraft(username));
-  const [activeSection, setActiveSection] = useState(null);
   const history = loadHistory(username);
   const dateOptions = history.map(h => h.date);
   const defaultStart = dateOptions.length ? dateOptions[dateOptions.length - 1] : new Date().toISOString().slice(0, 10);
@@ -30,11 +31,12 @@ const Dashboard = () => {
   // Calcoli dinamici dai dati nel context
   const { totaleEntrate, totalePatrimonio, totaleLiquidita } = useFinancialCalculations();
 
+  const currency = getUserCurrency(username);
   const totals = {
-    'Entrate Attuali': `${totaleEntrate} €`,
-    'Asset Patrimonio': `${totalePatrimonio} €`,
-    'Liquidità': `${totaleLiquidita} €`,
-    'Uscite': '€1.200',
+    'Entrate Attuali': formatCurrency(totaleEntrate, currency),
+    'Asset Patrimonio': formatCurrency(totalePatrimonio, currency),
+    'Liquidità': formatCurrency(totaleLiquidita, currency),
+    'Uscite': formatCurrency(1200, currency),
   };
 
   // Icone esempio (puoi usare emoji o icone da una libreria)
@@ -91,7 +93,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {showDraftMsg && (
+  {showDraftMsg && (
         <div style={{
           background: 'var(--accent-cyan)',
           color: 'var(--bg-dark)',
@@ -129,7 +131,7 @@ const Dashboard = () => {
           </button>
         </div>
       )}
-      {activeSection === null ? (
+  {activeSection === null ? (
         <div
           style={{
             display: 'flex',

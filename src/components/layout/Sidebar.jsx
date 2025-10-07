@@ -1,4 +1,5 @@
 import React from 'react';
+import UserMenu from './UserMenu';
 
 const tabs = [
   'Entrate Attuali',
@@ -11,7 +12,10 @@ const tabs = [
 
 const Sidebar = ({ onSelect, selected }) => (
   <aside className="sidebar">
-    <h2>Dashboard</h2>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
+      <h2 style={{ margin: 0 }}>Dashboard</h2>
+      <UserMenu />
+    </div>
     <nav>
       {tabs.map(tab => (
         <a
