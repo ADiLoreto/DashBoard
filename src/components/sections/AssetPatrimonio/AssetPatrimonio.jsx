@@ -264,7 +264,7 @@ const AssetPatrimonio = () => {
                   {/* ...DonutChart rimosso dalla sezione espansa... */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start', justifyContent: 'center' }}>
                     {conti.map(c => (
-                      <BigTab key={c.id} title={c.titolo || c.name || 'Conto'} value={formatCurrency(Number(c.saldo||0), currency)} onClick={() => openEditConto(c)} />
+                      <BigTab key={c.id} title={c.titolo || c.name || 'Conto'} value={formatCurrency(Number(c.saldo||0), currency)} onClick={() => openEditConto(c)} titleStyle={{ fontSize: 22 }} />
                     ))}
                     <div className="big-tab add-tab" onClick={() => setShowAddModal(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
@@ -298,7 +298,7 @@ const AssetPatrimonio = () => {
                   {/* ...DonutChart rimosso dalla sezione espansa... */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
                     {buoni.map(b => (
-                      <BigTab key={b.id} title={b.titolo || b.name || 'Buono'} value={formatCurrency(getValue(b), currency)} onClick={() => openEditBuono(b)} />
+                      <BigTab key={b.id} title={b.titolo || b.name || 'Buono'} value={formatCurrency(getValue(b), currency)} onClick={() => openEditBuono(b)} titleStyle={{ fontSize: 22 }} />
                     ))}
                     <div className="big-tab add-tab" onClick={() => setShowAddBuono(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
@@ -332,7 +332,7 @@ const AssetPatrimonio = () => {
                   {/* ...DonutChart rimosso dalla sezione espansa... */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
                     {azioni.map(a => (
-                      <BigTab key={a.id} title={a.titolo || a.name || 'Azione'} value={formatCurrency(getValue(a), currency)} onClick={() => openEditAzione(a)} />
+                      <BigTab key={a.id} title={a.titolo || a.name || 'Azione'} value={formatCurrency(getValue(a), currency)} onClick={() => openEditAzione(a)} titleStyle={{ fontSize: 22 }} />
                     ))}
                     <div className="big-tab add-tab" onClick={() => setShowAddAzione(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
@@ -365,7 +365,7 @@ const AssetPatrimonio = () => {
                   {/* ...DonutChart rimosso dalla sezione espansa... */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
                     {etf.map(e => (
-                      <BigTab key={e.id} title={e.titolo || e.name || 'ETF'} value={formatCurrency(getValue(e), currency)} onClick={() => openEditEtf(e)} />
+                      <BigTab key={e.id} title={e.titolo || e.name || 'ETF'} value={formatCurrency(getValue(e), currency)} onClick={() => openEditEtf(e)} titleStyle={{ fontSize: 22 }} />
                     ))}
                     <div className="big-tab add-tab" onClick={() => setShowAddEtf(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
@@ -398,7 +398,7 @@ const AssetPatrimonio = () => {
                   {/* ...DonutChart rimosso dalla sezione espansa... */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
                     {crypto.map(c => (
-                      <BigTab key={c.id} title={c.titolo || c.name || 'Crypto'} value={formatCurrency(getValue(c), currency)} onClick={() => openEditCrypto(c)} />
+                      <BigTab key={c.id} title={c.titolo || c.name || 'Crypto'} value={formatCurrency(getValue(c), currency)} onClick={() => openEditCrypto(c)} titleStyle={{ fontSize: 22 }} />
                     ))}
                     <div className="big-tab add-tab" onClick={() => setShowAddCrypto(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
@@ -431,7 +431,7 @@ const AssetPatrimonio = () => {
                   {/* ...DonutChart rimosso dalla sezione espansa... */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
                     {oro.map(o => (
-                      <BigTab key={o.id} title={o.titolo || o.name || 'Oro'} value={formatCurrency(getValue(o), currency)} onClick={() => openEditOro(o)} />
+                      <BigTab key={o.id} title={o.titolo || o.name || 'Oro'} value={formatCurrency(getValue(o), currency)} onClick={() => openEditOro(o)} titleStyle={{ fontSize: 22 }} />
                     ))}
                     <div className="big-tab add-tab" onClick={() => setShowAddOro(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>

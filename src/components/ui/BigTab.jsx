@@ -1,6 +1,6 @@
 import React from 'react';
 
-const BigTab = ({ title, value, icon, onClick }) => (
+const BigTab = ({ title, value, icon, onClick, titleStyle }) => (
   <div
     className="big-tab"
     onClick={onClick}
@@ -26,7 +26,7 @@ const BigTab = ({ title, value, icon, onClick }) => (
     }}
   >
     {icon && <span className="big-tab-icon">{icon}</span>}
-    <div style={{ fontWeight: 700 }}>{title}</div>
+  <div style={{ fontWeight: 700, ...(titleStyle || {}) }}>{title}</div>
     <div style={{ fontFamily: 'Roboto Mono, monospace', color: 'var(--accent-cyan)', fontSize: 40 }}>
       {value}
     </div>
