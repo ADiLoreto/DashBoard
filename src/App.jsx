@@ -13,7 +13,7 @@ const AppInner = () => {
   return (
     <FinanceProvider>
       <div style={{ display: 'flex', background: '#28323c', minHeight: '100vh' }}>
-        <Sidebar onSelect={setActiveSection} selected={activeSection} />
+  <Sidebar onSelect={setActiveSection} selected={activeSection} onBack={() => setActiveSection(null)} />
         <Dashboard activeSection={activeSection} setActiveSection={setActiveSection} />
       </div>
     </FinanceProvider>

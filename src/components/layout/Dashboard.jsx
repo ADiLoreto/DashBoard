@@ -164,7 +164,6 @@ const Dashboard = (props) => {
         </div>
       ) : (
         <div style={{ padding: 32 }}>
-          <button onClick={() => setActiveSection(null)} style={{ marginBottom: 24, background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 'bold', fontSize: 18, cursor: 'pointer' }}>← Indietro</button>
           {activeSection === 'Entrate Attuali' && <Stipendio dateRange={dateRange} />}
           {activeSection === 'Asset Patrimonio' && <AssetPatrimonio dateRange={dateRange} />}
           {activeSection === 'Uscite' && <Uscite dateRange={dateRange} />}
