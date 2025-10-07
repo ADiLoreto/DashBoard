@@ -1,6 +1,7 @@
-import React, { createContext, useReducer, useEffect } from 'react';
+import React, { createContext, useReducer, useEffect, useContext } from 'react';
 import { initialState } from '../config/constants';
-import { saveState, loadState } from '../utils/storage';
+import { saveState, loadState, loadDraft, saveDraft, clearDraft } from '../utils/storage';
+import { AuthContext } from './AuthContext';
 
 export const FinanceContext = createContext();
 
@@ -8,6 +9,79 @@ const financeReducer = (state, action) => {
   switch(action.type) {
     case 'UPDATE_STIPENDIO':
       return { ...state, entrate: { ...state.entrate, stipendio: { ...state.entrate.stipendio, ...action.payload } } };
+    case 'ADD_ENTRATA':
+      return { ...state, entrate: { ...state.entrate, altreEntrate: [ ...(state.entrate.altreEntrate || []), action.payload ] } };
+    case 'UPDATE_ENTRATA':
+      return {
+        ...state,
+        entrate: {
+          ...state.entrate,
+          altreEntrate: (state.entrate.altreEntrate || []).map(e => e.id === action.payload.id ? { ...e, ...action.payload } : e)
+        }
+      };
+    case 'DELETE_ENTRATA':
+      return {
+        ...state,
+        entrate: {
+          ...state.entrate,
+          altreEntrate: (state.entrate.altreEntrate || []).filter(e => e.id !== action.payload.id)
+        }
+      };
+    case 'ADD_PATRIMONIO_CONTO':
+      return { ...state, patrimonio: { ...state.patrimonio, contiDeposito: [ ...(state.patrimonio.contiDeposito || []), action.payload ] } };
+    case 'UPDATE_PATRIMONIO_CONTO':
+      return { ...state, patrimonio: { ...state.patrimonio, contiDeposito: (state.patrimonio.contiDeposito || []).map(c => c.id === action.payload.id ? { ...c, ...action.payload } : c) } };
+    case 'DELETE_PATRIMONIO_CONTO':
+      return { ...state, patrimonio: { ...state.patrimonio, contiDeposito: (state.patrimonio.contiDeposito || []).filter(c => c.id !== action.payload.id) } };
+
+    case 'ADD_INVESTIMENTO_AZIONE':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, azioni: [ ...(state.patrimonio.investimenti.azioni || []), action.payload ] } } };
+    case 'UPDATE_INVESTIMENTO_AZIONE':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, azioni: (state.patrimonio.investimenti.azioni || []).map(a => a.id === action.payload.id ? { ...a, ...action.payload } : a) } } };
+    case 'DELETE_INVESTIMENTO_AZIONE':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, azioni: (state.patrimonio.investimenti.azioni || []).filter(a => a.id !== action.payload.id) } } };
+
+    case 'ADD_BUONO_TITOLO':
+      return { ...state, patrimonio: { ...state.patrimonio, buoniTitoli: [ ...(state.patrimonio.buoniTitoli || []), action.payload ] } };
+    case 'UPDATE_BUONO_TITOLO':
+      return { ...state, patrimonio: { ...state.patrimonio, buoniTitoli: (state.patrimonio.buoniTitoli || []).map(b => b.id === action.payload.id ? { ...b, ...action.payload } : b) } };
+    case 'DELETE_BUONO_TITOLO':
+      return { ...state, patrimonio: { ...state.patrimonio, buoniTitoli: (state.patrimonio.buoniTitoli || []).filter(b => b.id !== action.payload.id) } };
+
+    case 'ADD_INVESTIMENTO_ETF':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, etf: [ ...(state.patrimonio.investimenti.etf || []), action.payload ] } } };
+    case 'UPDATE_INVESTIMENTO_ETF':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, etf: (state.patrimonio.investimenti.etf || []).map(i => i.id === action.payload.id ? { ...i, ...action.payload } : i) } } };
+    case 'DELETE_INVESTIMENTO_ETF':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, etf: (state.patrimonio.investimenti.etf || []).filter(i => i.id !== action.payload.id) } } };
+
+    case 'ADD_INVESTIMENTO_CRYPTO':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, crypto: [ ...(state.patrimonio.investimenti.crypto || []), action.payload ] } } };
+    case 'UPDATE_INVESTIMENTO_CRYPTO':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, crypto: (state.patrimonio.investimenti.crypto || []).map(c => c.id === action.payload.id ? { ...c, ...action.payload } : c) } } };
+    case 'DELETE_INVESTIMENTO_CRYPTO':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, crypto: (state.patrimonio.investimenti.crypto || []).filter(c => c.id !== action.payload.id) } } };
+
+    case 'ADD_ORO':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, oro: [ ...(state.patrimonio.investimenti.oro || []), action.payload ] } } };
+    case 'UPDATE_ORO':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, oro: (state.patrimonio.investimenti.oro || []).map(o => o.id === action.payload.id ? { ...o, ...action.payload } : o) } } };
+    case 'DELETE_ORO':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, oro: (state.patrimonio.investimenti.oro || []).filter(o => o.id !== action.payload.id) } } };
+
+    case 'ADD_USCITA_FISSA':
+      return { ...state, uscite: { ...state.uscite, fisse: [ ...(state.uscite.fisse || []), action.payload ] } };
+    case 'UPDATE_USCITA_FISSA':
+      return { ...state, uscite: { ...state.uscite, fisse: (state.uscite.fisse || []).map(u => u.id === action.payload.id ? { ...u, ...action.payload } : u) } };
+    case 'DELETE_USCITA_FISSA':
+      return { ...state, uscite: { ...state.uscite, fisse: (state.uscite.fisse || []).filter(u => u.id !== action.payload.id) } };
+
+    case 'ADD_USCITA_VARIABILE':
+      return { ...state, uscite: { ...state.uscite, variabili: [ ...(state.uscite.variabili || []), action.payload ] } };
+    case 'UPDATE_USCITA_VARIABILE':
+      return { ...state, uscite: { ...state.uscite, variabili: (state.uscite.variabili || []).map(u => u.id === action.payload.id ? { ...u, ...action.payload } : u) } };
+    case 'DELETE_USCITA_VARIABILE':
+      return { ...state, uscite: { ...state.uscite, variabili: (state.uscite.variabili || []).filter(u => u.id !== action.payload.id) } };
     case 'ADD_INVESTIMENTO':
       // logica per aggiungere investimento
       return state;
@@ -22,17 +96,27 @@ const financeReducer = (state, action) => {
 };
 
 export const FinanceProvider = ({ children }) => {
+  const { user } = useContext(AuthContext);
+  const username = user?.username;
   const [state, dispatch] = useReducer(financeReducer, initialState);
 
   useEffect(() => {
-    const savedState = loadState();
+    if (!username) return;
+    const savedState = loadState(username);
     if (savedState) dispatch({ type: 'LOAD_STATE', payload: savedState });
-  }, []);
+  }, [username]);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => saveState(state), 1000);
+    if (!username) return;
+    const timeoutId = setTimeout(() => saveState(state, username), 1000);
     return () => clearTimeout(timeoutId);
-  }, [state]);
+  }, [state, username]);
+
+  // auto-save draft example: whenever state changes save draft for user
+  useEffect(() => {
+    if (!username) return;
+    saveDraft(state, username);
+  }, [state, username]);
 
   return <FinanceContext.Provider value={{ state, dispatch }}>{children}</FinanceContext.Provider>;
 };

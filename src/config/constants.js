@@ -7,11 +7,12 @@ export const initialState = {
   patrimonio: {
     tfr: 0,
     contiDeposito: [],
+    buoniTitoli: [],
     investimenti: {
       azioni: [],
       etf: [],
       crypto: [],
-      oro: 0
+      oro: []
     }
   },
   liquidita: {

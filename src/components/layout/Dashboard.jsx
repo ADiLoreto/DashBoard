@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import BigTab from '../ui/BigTab';
-import { loadHistory } from '../../utils/storage';
-import { loadDraft, saveSnapshot, clearDraft } from '../../utils/storage';
+import { loadHistory, loadDraft, saveSnapshot, clearDraft } from '../../utils/storage';
+import { AuthContext } from '../../context/AuthContext';
 import Stipendio from '../sections/EntrateAttuali/Stipendio';
 import AssetPatrimonio from '../sections/AssetPatrimonio/AssetPatrimonio';
+import Uscite from '../sections/Uscite/Uscite';
+import { useFinancialCalculations } from '../../hooks/useFinancialCalculations';
 
 const Dashboard = () => {
-  const [showDraftMsg, setShowDraftMsg] = useState(!!loadDraft());
+  const { user } = useContext(AuthContext);
+  const username = user?.username;
+  const [showDraftMsg, setShowDraftMsg] = useState(!!loadDraft(username));
   const [activeSection, setActiveSection] = useState(null);
-  const history = loadHistory();
+  const history = loadHistory(username);
   const dateOptions = history.map(h => h.date);
   const defaultStart = dateOptions.length ? dateOptions[dateOptions.length - 1] : new Date().toISOString().slice(0, 10);
   const [dateRange, setDateRange] = useState({
@@ -23,11 +27,13 @@ const Dashboard = () => {
     setDateRange(prev => ({ ...prev, [name]: value }));
   };
 
-  // Esempio di totali (da calcolare con hook o context)
+  // Calcoli dinamici dai dati nel context
+  const { totaleEntrate, totalePatrimonio, totaleLiquidita } = useFinancialCalculations();
+
   const totals = {
-    'Entrate Attuali': '€2.500',
-    'Asset Patrimonio': '€45.000',
-    'Liquidità': '€8.000',
+    'Entrate Attuali': `${totaleEntrate} €`,
+    'Asset Patrimonio': `${totalePatrimonio} €`,
+    'Liquidità': `${totaleLiquidita} €`,
     'Uscite': '€1.200',
   };
 
@@ -111,10 +117,10 @@ const Dashboard = () => {
               cursor: 'pointer'
             }}
             onClick={() => {
-              const draft = loadDraft();
+              const draft = loadDraft(username);
               if (draft) {
-                saveSnapshot({ ...draft, date: saveDate });
-                clearDraft();
+                saveSnapshot({ ...draft, date: saveDate }, username);
+                clearDraft(username);
                 setShowDraftMsg(false);
               }
             }}
@@ -149,6 +155,7 @@ const Dashboard = () => {
           <button onClick={() => setActiveSection(null)} style={{ marginBottom: 24, background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 'bold', fontSize: 18, cursor: 'pointer' }}>← Indietro</button>
           {activeSection === 'Entrate Attuali' && <Stipendio dateRange={dateRange} />}
           {activeSection === 'Asset Patrimonio' && <AssetPatrimonio dateRange={dateRange} />}
+          {activeSection === 'Uscite' && <Uscite dateRange={dateRange} />}
           {/* ...altre sezioni... */}
         </div>
       )}

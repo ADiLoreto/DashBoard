@@ -4,10 +4,7 @@ import { FinanceContext } from '../../../context/FinanceContext';
 import { z } from 'zod';
 
 const stipendioSchema = z.object({
-  lordo: z.number().min(0),
-  netto: z.number().min(0),
-  oreStandard: z.number().min(1).max(400),
-  oreEffettive: z.number().min(0)
+  netto: z.number().min(0)
 });
 
 const Stipendio = () => {
@@ -16,7 +13,7 @@ const Stipendio = () => {
   const handleSave = (data) => {
     try {
       const validated = stipendioSchema.parse(data);
-      dispatch({ type: 'UPDATE_STIPENDIO', payload: validated });
+  dispatch({ type: 'UPDATE_STIPENDIO', payload: validated });
     } catch (error) {
       alert('Errore validazione: ' + error.message);
     }
@@ -24,9 +21,12 @@ const Stipendio = () => {
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [title, setTitle] = useState('Stipendio');
-  const [showModal, setShowModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false); // for stipendio
+  const [showEntryModal, setShowEntryModal] = useState(false); // for editing an entry
   const [newEntry, setNewEntry] = useState({ title: '', value: '' });
-  const [entries, setEntries] = useState([]);
+  const [editNetto, setEditNetto] = useState((state.entrate.stipendio.netto && state.entrate.stipendio.netto > 0) ? state.entrate.stipendio.netto : '');
+  const [editingEntry, setEditingEntry] = useState(null);
 
   const handleTitleEdit = () => setIsEditingTitle(true);
   const handleTitleChange = (e) => setTitle(e.target.value);
@@ -34,10 +34,34 @@ const Stipendio = () => {
 
   const handleAddEntry = () => {
     if (newEntry.title && newEntry.value) {
-      setEntries([...entries, newEntry]);
+      // save to context as altra entrata
+  const id = Math.random().toString(36).slice(2, 9);
+  dispatch({ type: 'ADD_ENTRATA', payload: { id, titolo: newEntry.title, importo: Number(newEntry.value), date: new Date().toISOString().slice(0,10) } });
       setNewEntry({ title: '', value: '' });
-      setShowModal(false);
+      setShowAddModal(false);
     }
+  };
+
+  const openEditModal = () => {
+  setEditNetto((state.entrate.stipendio.netto && state.entrate.stipendio.netto > 0) ? state.entrate.stipendio.netto : '');
+    setShowEditModal(true);
+  };
+
+  const openEntryEdit = (entry) => {
+    setEditingEntry(entry);
+    setShowEntryModal(true);
+  };
+
+  const handleUpdateEntry = (payload) => {
+    dispatch({ type: 'UPDATE_ENTRATA', payload });
+    setShowEntryModal(false);
+    setEditingEntry(null);
+  };
+
+  const handleDeleteEntry = (id) => {
+    dispatch({ type: 'DELETE_ENTRATA', payload: { id } });
+    setShowEntryModal(false);
+    setEditingEntry(null);
   };
 
   return (
@@ -56,14 +80,14 @@ const Stipendio = () => {
           <span style={{ cursor: 'pointer' }} onClick={handleTitleEdit}>{title}</span>
         )}
         value={state.entrate.stipendio.netto + ' €'}
-        onClick={() => {/* Qui puoi aprire il dettaglio o la modifica */}}
+        onClick={openEditModal}
       />
-      {entries.map((entry, idx) => (
+      {(state.entrate.altreEntrate || []).map((entry) => (
         <BigTab
-          key={idx}
-          title={entry.title}
-          value={entry.value}
-          onClick={() => {/* Dettaglio/modifica voce */}}
+          key={entry.id}
+          title={entry.titolo || entry.title}
+          value={(entry.importo !== undefined ? entry.importo : entry.value) + ' €'}
+          onClick={() => openEntryEdit(entry)}
         />
       ))}
       <div
@@ -84,13 +108,13 @@ const Stipendio = () => {
           fontSize: 48,
           transition: 'all 0.2s'
         }}
-        onClick={() => setShowModal(true)}
+  onClick={() => setShowAddModal(true)}
       >
         <span style={{ fontSize: 64, color: 'var(--accent-cyan)' }}>+</span>
         <div style={{ fontSize: 18, marginTop: 8 }}>Aggiungi nuova voce</div>
       </div>
 
-      {showModal && (
+      {showAddModal && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -103,25 +127,82 @@ const Stipendio = () => {
           justifyContent: 'center',
           zIndex: 1000
         }}>
-          <div style={{ background: 'var(--bg-light)', padding: 32, borderRadius: 16, minWidth: 320, boxShadow: '0 4px 24px rgba(0,0,0,0.25)' }}>
-            <h2 style={{ color: 'var(--bg-dark)', marginBottom: 16 }}>Nuova Voce</h2>
+          <div style={{ background: 'var(--bg-light)', padding: 32, borderRadius: 16, minWidth: 420, boxShadow: '0 8px 48px rgba(0,0,0,0.35)' }}>
+            <h2 style={{ color: 'var(--bg-dark)', marginBottom: 16, fontSize: 28 }}>Nuova Voce</h2>
             <input
               type="text"
               placeholder="Titolo"
               value={newEntry.title}
               onChange={e => setNewEntry({ ...newEntry, title: e.target.value })}
-              style={{ width: '100%', marginBottom: 12, padding: '8px', fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }}
+              style={{ width: '100%', marginBottom: 12, padding: '12px', fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }}
             />
             <input
               type="number"
               placeholder="Valore (€)"
               value={newEntry.value}
               onChange={e => setNewEntry({ ...newEntry, value: e.target.value })}
-              style={{ width: '100%', marginBottom: 12, padding: '8px', fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }}
+              style={{ width: '100%', marginBottom: 12, padding: '12px', fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }}
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-              <button onClick={() => setShowModal(false)} style={{ background: 'var(--bg-medium)', color: 'var(--bg-light)', border: 'none', borderRadius: 8, padding: '8px 20px', fontWeight: 'bold', fontSize: 16, cursor: 'pointer' }}>Annulla</button>
-              <button onClick={handleAddEntry} style={{ background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', borderRadius: 8, padding: '8px 20px', fontWeight: 'bold', fontSize: 16, cursor: 'pointer' }}>Aggiungi</button>
+              <button onClick={() => setShowAddModal(false)} style={{ background: 'var(--bg-medium)', color: 'var(--bg-light)', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 'bold', fontSize: 16, cursor: 'pointer' }}>Annulla</button>
+              <button onClick={handleAddEntry} style={{ background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 'bold', fontSize: 16, cursor: 'pointer' }}>Aggiungi</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(48, 57, 67, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{ background: 'var(--bg-light)', padding: 32, borderRadius: 16, minWidth: 420, boxShadow: '0 8px 48px rgba(0,0,0,0.35)' }}>
+            <h3 style={{ color: 'var(--bg-dark)', fontSize: 28 }}>Modifica Stipendio</h3>
+            <div style={{ display: 'grid', gap: 12, marginTop: 8 }}>
+              <label style={{ fontWeight: 700 }}>Netto (€)</label>
+              <input type="number" value={editNetto} onChange={e => setEditNetto(e.target.value)} style={{ padding: 12, fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 16 }}>
+              <button onClick={() => setShowEditModal(false)} style={{ background: 'var(--bg-medium)', color: 'var(--bg-light)', border: 'none', borderRadius: 8, padding: '10px 20px' }}>Annulla</button>
+              <button onClick={() => { const n = Number(editNetto || 0); handleSave({ netto: n }); setShowEditModal(false); }} style={{ background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', borderRadius: 8, padding: '10px 20px' }}>Salva</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEntryModal && editingEntry && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(48, 57, 67, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{ background: 'var(--bg-light)', padding: 32, borderRadius: 16, minWidth: 420, boxShadow: '0 8px 48px rgba(0,0,0,0.35)' }}>
+            <h3 style={{ color: 'var(--bg-dark)', fontSize: 24 }}>Modifica voce</h3>
+            <div style={{ display: 'grid', gap: 12, marginTop: 8 }}>
+              <input type="text" value={editingEntry.titolo || editingEntry.title} onChange={e => setEditingEntry(prev => ({ ...prev, titolo: e.target.value }))} style={{ padding: 12, fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }} />
+              <input type="number" value={editingEntry.importo !== undefined ? editingEntry.importo : editingEntry.value} onChange={e => setEditingEntry(prev => ({ ...prev, importo: Number(e.target.value) }))} style={{ padding: 12, fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginTop: 16 }}>
+              <button onClick={() => { handleDeleteEntry(editingEntry.id); }} style={{ background: '#ff6b6b', color: 'white', border: 'none', borderRadius: 8, padding: '10px 20px' }}>Elimina</button>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button onClick={() => setShowEntryModal(false)} style={{ background: 'var(--bg-medium)', color: 'var(--bg-light)', border: 'none', borderRadius: 8, padding: '10px 20px' }}>Annulla</button>
+                <button onClick={() => handleUpdateEntry(editingEntry)} style={{ background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', borderRadius: 8, padding: '10px 20px' }}>Salva</button>
+              </div>
             </div>
           </div>
         </div>

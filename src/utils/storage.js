@@ -1,31 +1,33 @@
 // Gestione draft temporaneo
-export const saveDraft = (draft) => {
-  localStorage.setItem('financeDraft', JSON.stringify(draft));
+const keyFor = (base, username) => username ? `${base}_${username}` : base;
+
+export const saveDraft = (draft, username) => {
+  localStorage.setItem(keyFor('financeDraft', username), JSON.stringify(draft));
 };
 
-export const loadDraft = () => {
+export const loadDraft = (username) => {
   try {
-    const data = localStorage.getItem('financeDraft');
+    const data = localStorage.getItem(keyFor('financeDraft', username));
     return data ? JSON.parse(data) : null;
   } catch {
     return null;
   }
 };
 
-export const clearDraft = () => {
-  localStorage.removeItem('financeDraft');
+export const clearDraft = (username) => {
+  localStorage.removeItem(keyFor('financeDraft', username));
 };
-export const saveState = (state) => {
+export const saveState = (state, username) => {
   try {
-    localStorage.setItem('financeState', JSON.stringify(state));
+    localStorage.setItem(keyFor('financeState', username), JSON.stringify(state));
   } catch (e) {
     // Gestione errore
   }
 };
 
-export const loadState = () => {
+export const loadState = (username) => {
   try {
-    const state = localStorage.getItem('financeState');
+    const state = localStorage.getItem(keyFor('financeState', username));
     return state ? JSON.parse(state) : null;
   } catch (e) {
     return null;
@@ -33,15 +35,15 @@ export const loadState = () => {
 };
 
 // Storico degli snapshot
-export const saveSnapshot = (snapshot) => {
-  const history = loadHistory();
+export const saveSnapshot = (snapshot, username) => {
+  const history = loadHistory(username);
   history.push(snapshot);
-  localStorage.setItem('financeHistory', JSON.stringify(history));
+  localStorage.setItem(keyFor('financeHistory', username), JSON.stringify(history));
 };
 
-export const loadHistory = () => {
+export const loadHistory = (username) => {
   try {
-    const data = localStorage.getItem('financeHistory');
+    const data = localStorage.getItem(keyFor('financeHistory', username));
     return data ? JSON.parse(data) : [];
   } catch {
     return [];
