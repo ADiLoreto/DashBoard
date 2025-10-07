@@ -1,4 +1,4 @@
-import React, { createContext, useReducer, useEffect, useContext } from 'react';
+import React, { createContext, useReducer, useEffect, useContext, useState } from 'react';
 import { initialState } from '../config/constants';
 import { saveState, loadState, loadDraft, saveDraft, clearDraft } from '../utils/storage';
 import { AuthContext } from './AuthContext';
@@ -99,6 +99,7 @@ export const FinanceProvider = ({ children }) => {
   const { user } = useContext(AuthContext);
   const username = user?.username;
   const [state, dispatch] = useReducer(financeReducer, initialState);
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     if (!username) return;
@@ -108,7 +109,11 @@ export const FinanceProvider = ({ children }) => {
 
   useEffect(() => {
     if (!username) return;
-    const timeoutId = setTimeout(() => saveState(state, username), 1000);
+    setDirty(true);
+    const timeoutId = setTimeout(() => {
+      saveState(state, username);
+      setDirty(false);
+    }, 1000);
     return () => clearTimeout(timeoutId);
   }, [state, username]);
 
@@ -118,5 +123,15 @@ export const FinanceProvider = ({ children }) => {
     saveDraft(state, username);
   }, [state, username]);
 
-  return <FinanceContext.Provider value={{ state, dispatch }}>{children}</FinanceContext.Provider>;
+  // ensure draft is saved on page unload
+  useEffect(() => {
+    if (!username) return;
+    const handler = () => saveDraft(state, username);
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [state, username]);
+
+  const markSaved = () => setDirty(false);
+
+  return <FinanceContext.Provider value={{ state, dispatch, dirty, markSaved }}>{children}</FinanceContext.Provider>;
 };

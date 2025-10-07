@@ -6,12 +6,15 @@ import Stipendio from '../sections/EntrateAttuali/Stipendio';
 import AssetPatrimonio from '../sections/AssetPatrimonio/AssetPatrimonio';
 import Uscite from '../sections/Uscite/Uscite';
 import { useFinancialCalculations } from '../../hooks/useFinancialCalculations';
+import { FinanceContext } from '../../context/FinanceContext';
 import { formatCurrency, getUserCurrency } from '../../utils/format';
 
 const Dashboard = (props) => {
   const { activeSection, setActiveSection } = props;
   const { user } = useContext(AuthContext);
   const username = user?.username;
+  const { dirty, markSaved } = useContext(FinanceContext);
+  const [, setTick] = useState(0);
   const [showDraftMsg, setShowDraftMsg] = useState(!!loadDraft(username));
   const history = loadHistory(username);
   const dateOptions = history.map(h => h.date);
@@ -27,6 +30,13 @@ const Dashboard = (props) => {
     const { name, value } = e.target;
     setDateRange(prev => ({ ...prev, [name]: value }));
   };
+
+  // re-render when user settings update (currency change)
+  React.useEffect(() => {
+    const h = () => setTick(t => t + 1);
+    window.addEventListener('user_settings_changed', h);
+    return () => window.removeEventListener('user_settings_changed', h);
+  }, []);
 
   // Calcoli dinamici dai dati nel context
   const { totaleEntrate, totalePatrimonio, totaleLiquidita } = useFinancialCalculations();
@@ -159,6 +169,20 @@ const Dashboard = (props) => {
           {activeSection === 'Asset Patrimonio' && <AssetPatrimonio dateRange={dateRange} />}
           {activeSection === 'Uscite' && <Uscite dateRange={dateRange} />}
           {/* ...altre sezioni... */}
+        </div>
+      )}
+      {/* floating save button when there are unsaved changes */}
+      {dirty && (
+        <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 60 }}>
+          <button onClick={() => {
+            const draft = loadDraft(username);
+            if (draft) {
+              saveSnapshot({ ...draft, date: saveDate }, username);
+              clearDraft(username);
+            }
+            markSaved();
+            setShowDraftMsg(false);
+          }} style={{ background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', padding: '12px 18px', borderRadius: 12, fontWeight: '700', cursor: 'pointer' }}>Salva modifiche</button>
         </div>
       )}
     </main>
