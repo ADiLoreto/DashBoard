@@ -90,7 +90,7 @@ const Dashboard = (props) => {
     return { date, entrate, uscite };
   };
 
-  // build patrimonio total from snapshot
+  // build patrimonio breakdown from snapshot
   const buildPatrimonioFromSnapshot = (snap) => {
     const st = snap && snap.state ? snap.state : snap || {};
     const date = snap?.date || st?.date || '';
@@ -101,7 +101,7 @@ const Dashboard = (props) => {
     const azioni = (st?.patrimonio?.investimenti?.azioni || []).reduce((s, a) => s + (a.valore || 0), 0);
 
     const patrimonio = tfr + conti + buoni + azioni;
-    return { date, patrimonio };
+    return { date, tfr, conti, buoni, azioni, patrimonio };
   };
 
   const chartData = React.useMemo(() => {
@@ -128,17 +128,29 @@ const Dashboard = (props) => {
     return filtered.map(p => ({ ...p, date: p.date }));
   }, [history, state]);
 
+  // current totals for percentages (used in the side bracket)
+  const currEntrate = (
+    (state?.entrate?.stipendio?.netto || 0) +
+    ((state?.entrate?.bonus || []).reduce ? state.entrate.bonus.reduce((s, b) => s + (b.importo || 0), 0) : 0) +
+    ((state?.entrate?.altreEntrate || []).reduce ? state.entrate.altreEntrate.reduce((s, e) => s + (e.importo || 0), 0) : 0)
+  );
+  const currUscite = (
+    ((state?.uscite?.fisse || []).reduce ? state.uscite.fisse.reduce((s, u) => s + (u.importo || 0), 0) : 0) +
+    ((state?.uscite?.variabili || []).reduce ? state.uscite.variabili.reduce((s, u) => s + (u.importo || 0), 0) : 0)
+  );
+  const percUscite = currEntrate ? (currUscite / currEntrate) * 100 : 0;
+  const percRemain = Math.max(0, 100 - percUscite);
+
   const chartDataPatrimonio = React.useMemo(() => {
     const points = (history || []).map(h => buildPatrimonioFromSnapshot(h));
 
-    const currPatrimonio = (
-      (state?.patrimonio?.tfr || 0) +
-      ((state?.patrimonio?.contiDeposito || []).reduce ? state.patrimonio.contiDeposito.reduce((s, c) => s + (c.saldo || 0), 0) : 0) +
-      ((state?.patrimonio?.buoniTitoli || []).reduce ? state.patrimonio.buoniTitoli.reduce((s, b) => s + (b.importo || 0), 0) : 0) +
-      ((state?.patrimonio?.investimenti?.azioni || []).reduce ? state.patrimonio.investimenti.azioni.reduce((s, a) => s + (a.valore || 0), 0) : 0)
-    );
+    const currTfr = state?.patrimonio?.tfr || 0;
+    const currConti = (state?.patrimonio?.contiDeposito || []).reduce((s, c) => s + (c.saldo || 0), 0);
+    const currBuoni = (state?.patrimonio?.buoniTitoli || []).reduce((s, b) => s + (b.importo || 0), 0);
+    const currAzioni = (state?.patrimonio?.investimenti?.azioni || []).reduce((s, a) => s + (a.valore || 0), 0);
+    const currPatrimonio = currTfr + currConti + currBuoni + currAzioni;
 
-    points.push({ date: new Date().toISOString().slice(0, 10), patrimonio: currPatrimonio });
+    points.push({ date: new Date().toISOString().slice(0, 10), tfr: currTfr, conti: currConti, buoni: currBuoni, azioni: currAzioni, patrimonio: currPatrimonio });
     points.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     const filtered = points.filter(p => {
       const d = p.date || '';
@@ -256,18 +268,35 @@ const Dashboard = (props) => {
   {activeSection === null && chartData && chartData.length > 0 && (
     <div style={{ width: '100%', maxWidth: 1100, margin: '12px auto 24px', padding: 12, background: 'var(--bg-medium)', borderRadius: 12 }}>
       <h3 style={{ color: 'var(--bg-light)', margin: '6px 0 12px' }}>Entrate vs Uscite (storico)</h3>
-      <div style={{ width: '100%', height: 220 }}>
+      <div style={{ display: 'flex', gap: 16, alignItems: 'stretch' }}>
+        <div style={{ flex: 1, minWidth: 0, height: 220 }}>
           <ResponsiveContainer>
-          <AreaChart data={chartData} margin={{ top: 8, right: 24, left: 64, bottom: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-            <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)' }} />
-            <YAxis width={80} tickFormatter={v => formatCurrency(v, currency)} tick={{ fill: 'var(--text-muted)' }} />
-            <Tooltip formatter={(val) => formatCurrency(val, currency)} />
-            <Legend />
-            <Area type="monotone" dataKey="entrate" stroke="#06d2fa" fill="rgba(6,210,250,0.12)" name="Entrate" />
-            <Area type="monotone" dataKey="uscite" stroke="#ff6b6b" fill="rgba(255,107,107,0.08)" name="Uscite" />
-          </AreaChart>
-        </ResponsiveContainer>
+            <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 64, bottom: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+              <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)' }} />
+              <YAxis width={80} tickFormatter={v => formatCurrency(v, currency)} tick={{ fill: 'var(--text-muted)' }} />
+              <Tooltip formatter={(val) => formatCurrency(val, currency)} />
+              <Legend />
+              <Area type="monotone" dataKey="entrate" stroke="#06d2fa" fill="rgba(6,210,250,0.12)" name="Entrate" />
+              <Area type="monotone" dataKey="uscite" stroke="#ff6b6b" fill="rgba(255,107,107,0.08)" name="Uscite" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+        <div style={{ width: 160, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+          <div style={{ alignSelf: 'stretch', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <div style={{ width: 4, height: 120, borderRadius: 8, borderLeft: '4px solid rgba(255,255,255,0.06)', position: 'relative' }}>
+              <div style={{ position: 'absolute', left: -8, top: `${Math.min(100, Math.max(0, 100 - percRemain))}%`, transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 12, height: 12, borderRadius: 6, background: '#06d2fa', boxShadow: '0 0 6px rgba(6,210,250,0.12)' }} />
+                <div style={{ color: 'var(--bg-light)', fontWeight: 700 }}>{percRemain.toFixed(1)}%</div>
+              </div>
+              <div style={{ position: 'absolute', left: -8, top: `${Math.min(100, Math.max(0, 100 - percUscite))}%`, transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 12, height: 12, borderRadius: 6, background: '#ff6b6b', boxShadow: '0 0 6px rgba(255,107,107,0.18)' }} />
+                <div style={{ color: 'var(--bg-light)', fontWeight: 700 }}>{percUscite.toFixed(1)}%</div>
+              </div>
+            </div>
+          </div>
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>Uscite vs residuo</div>
+        </div>
       </div>
     </div>
   )}
@@ -283,7 +312,11 @@ const Dashboard = (props) => {
             <YAxis width={80} tickFormatter={v => formatCurrency(v, currency)} tick={{ fill: 'var(--text-muted)' }} />
             <Tooltip formatter={(val) => formatCurrency(val, currency)} />
             <Legend />
-            <Area type="monotone" dataKey="patrimonio" stroke="#9b59b6" fill="rgba(155,89,182,0.12)" name="Patrimonio" />
+            <Area type="monotone" dataKey="tfr" stroke="#f39c12" fill="rgba(243,156,18,0.08)" name="TFR" />
+            <Area type="monotone" dataKey="conti" stroke="#27ae60" fill="rgba(39,174,96,0.08)" name="Conti deposito" />
+            <Area type="monotone" dataKey="buoni" stroke="#2980b9" fill="rgba(41,128,185,0.06)" name="Buoni/Titoli" />
+            <Area type="monotone" dataKey="azioni" stroke="#8e44ad" fill="rgba(142,68,173,0.06)" name="Azioni" />
+            <Area type="monotone" dataKey="patrimonio" stroke="#9b59b6" fill="rgba(155,89,182,0.12)" name="Totale" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
