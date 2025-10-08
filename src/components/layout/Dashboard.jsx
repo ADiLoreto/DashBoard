@@ -355,13 +355,22 @@ const Dashboard = (props) => {
             { key: 'etf', label: 'ETF', color: '#16a085' },
             { key: 'crypto', label: 'Crypto', color: '#d35400' },
             { key: 'oro', label: 'Oro', color: '#b7950b' },
-          ].map(s => (
-            <label key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)' }}>
-              <input type="checkbox" checked={!!visibleSeries[s.key]} onChange={() => setVisibleSeries(prev => ({ ...prev, [s.key]: !prev[s.key] }))} />
-              <span style={{ width: 12, height: 12, background: s.color, borderRadius: 4, display: 'inline-block' }} />
-              <span style={{ fontSize: 13 }}>{s.label}</span>
-            </label>
-          ))}
+          ].map(s => {
+            const on = !!visibleSeries[s.key];
+            return (
+              <div
+                key={s.key}
+                role="button"
+                tabIndex={0}
+                onClick={() => setVisibleSeries(prev => ({ ...prev, [s.key]: !prev[s.key] }))}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setVisibleSeries(prev => ({ ...prev, [s.key]: !prev[s.key] })); } }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: on ? 'var(--bg-light)' : 'var(--text-muted)', opacity: on ? 1 : 0.5 }}
+              >
+                <span style={{ width: 12, height: 12, background: s.color, borderRadius: 4, display: 'inline-block', opacity: on ? 1 : 0.35, boxShadow: on ? '0 0 6px rgba(0,0,0,0.12)' : 'none' }} />
+                <span style={{ fontSize: 13 }}>{s.label}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
