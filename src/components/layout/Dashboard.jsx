@@ -10,16 +10,16 @@ import ProgettiExtra from '../sections/ProgettiExtra/ProgettiExtra';
 import { useFinancialCalculations } from '../../hooks/useFinancialCalculations';
 import { FinanceContext } from '../../context/FinanceContext';
 import { formatCurrency, getUserCurrency } from '../../utils/format';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Line } from 'recharts';
 
 const Dashboard = (props) => {
   const { activeSection, setActiveSection } = props;
   const { user } = useContext(AuthContext);
   const username = user?.username;
   const { dirty, markSaved, state } = useContext(FinanceContext);
-  const [, setTick] = useState(0);
+  const [tick, setTick] = useState(0);
   const [showDraftMsg, setShowDraftMsg] = useState(!!loadDraft(username));
-  const history = loadHistory(username);
+  const [history, setHistory] = useState(() => loadHistory(username));
   const dateOptions = (history || []).map(h => h.date).filter(Boolean).sort();
   const defaultStart = dateOptions.length ? dateOptions[0] : new Date().toISOString().slice(0, 10);
   const [dateRange, setDateRange] = useState({
@@ -29,6 +29,15 @@ const Dashboard = (props) => {
   const [saveDate, setSaveDate] = useState(new Date().toISOString().slice(0, 10));
   const today = new Date().toISOString().slice(0, 10);
   const [saveConfirm, setSaveConfirm] = useState('');
+  const [visibleSeries, setVisibleSeries] = useState({
+    tfr: true,
+    conti: true,
+    buoni: true,
+    azioni: true,
+    etf: true,
+    crypto: true,
+  oro: true,
+  });
 
   const handleDateChange = (e) => {
     const { name, value } = e.target;
@@ -39,7 +48,7 @@ const Dashboard = (props) => {
     if (!username) return;
     clearHistory(username);
     // force re-render by bumping tick
-    setTick(t => t + 1);
+  setTick(t => t + 1);
     setShowDraftMsg(false);
   };
 
@@ -49,6 +58,12 @@ const Dashboard = (props) => {
     window.addEventListener('user_settings_changed', h);
     return () => window.removeEventListener('user_settings_changed', h);
   }, []);
+
+  // reload history when username or tick changes
+  React.useEffect(() => {
+    if (!username) return;
+    setHistory(loadHistory(username));
+  }, [username, tick]);
 
   // Calcoli dinamici dai dati nel context
   const { totaleEntrate, totalePatrimonio, totaleLiquidita } = useFinancialCalculations();
@@ -98,10 +113,13 @@ const Dashboard = (props) => {
     const tfr = st?.patrimonio?.tfr || 0;
     const conti = (st?.patrimonio?.contiDeposito || []).reduce((s, c) => s + (c.saldo || 0), 0);
     const buoni = (st?.patrimonio?.buoniTitoli || []).reduce((s, b) => s + (b.importo || 0), 0);
-    const azioni = (st?.patrimonio?.investimenti?.azioni || []).reduce((s, a) => s + (a.valore || 0), 0);
+  const azioni = (st?.patrimonio?.investimenti?.azioni || []).reduce((s, a) => s + (a.valore || 0), 0);
+  const etf = (st?.patrimonio?.investimenti?.etf || []).reduce((s, e) => s + (e.valore || 0), 0);
+  const crypto = (st?.patrimonio?.investimenti?.crypto || []).reduce((s, c) => s + (c.valore || 0), 0);
+  const oro = (st?.patrimonio?.investimenti?.oro || []).reduce((s, o) => s + (o.valore || 0), 0);
 
-    const patrimonio = tfr + conti + buoni + azioni;
-    return { date, tfr, conti, buoni, azioni, patrimonio };
+  const patrimonio = tfr + conti + buoni + azioni + etf + crypto + oro;
+  return { date, tfr, conti, buoni, azioni, etf, crypto, oro, patrimonio };
   };
 
   const chartData = React.useMemo(() => {
@@ -116,7 +134,7 @@ const Dashboard = (props) => {
       ((state?.uscite?.fisse || []).reduce ? state.uscite.fisse.reduce((s, u) => s + (u.importo || 0), 0) : 0) +
       ((state?.uscite?.variabili || []).reduce ? state.uscite.variabili.reduce((s, u) => s + (u.importo || 0), 0) : 0);
 
-    points.push({ date: new Date().toISOString().slice(0, 10), entrate: currEntrate, uscite: currUscite });
+  points.push({ date: saveDate, entrate: currEntrate, uscite: currUscite });
     points.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     // filter by dateRange
     const filtered = points.filter(p => {
@@ -126,7 +144,7 @@ const Dashboard = (props) => {
       return true;
     });
     return filtered.map(p => ({ ...p, date: p.date }));
-  }, [history, state]);
+  }, [history, state, saveDate, dateRange]);
 
   // current totals for percentages (used in the side bracket)
   const currEntrate = (
@@ -147,10 +165,13 @@ const Dashboard = (props) => {
     const currTfr = state?.patrimonio?.tfr || 0;
     const currConti = (state?.patrimonio?.contiDeposito || []).reduce((s, c) => s + (c.saldo || 0), 0);
     const currBuoni = (state?.patrimonio?.buoniTitoli || []).reduce((s, b) => s + (b.importo || 0), 0);
-    const currAzioni = (state?.patrimonio?.investimenti?.azioni || []).reduce((s, a) => s + (a.valore || 0), 0);
-    const currPatrimonio = currTfr + currConti + currBuoni + currAzioni;
+  const currAzioni = (state?.patrimonio?.investimenti?.azioni || []).reduce((s, a) => s + (a.valore || 0), 0);
+  const currEtf = (state?.patrimonio?.investimenti?.etf || []).reduce((s, e) => s + (e.valore || 0), 0);
+  const currCrypto = (state?.patrimonio?.investimenti?.crypto || []).reduce((s, c) => s + (c.valore || 0), 0);
+  const currOro = (state?.patrimonio?.investimenti?.oro || []).reduce((s, o) => s + (o.valore || 0), 0);
+  const currPatrimonio = currTfr + currConti + currBuoni + currAzioni + currEtf + currCrypto + currOro;
 
-    points.push({ date: new Date().toISOString().slice(0, 10), tfr: currTfr, conti: currConti, buoni: currBuoni, azioni: currAzioni, patrimonio: currPatrimonio });
+  points.push({ date: saveDate, tfr: currTfr, conti: currConti, buoni: currBuoni, azioni: currAzioni, etf: currEtf, crypto: currCrypto, oro: currOro, patrimonio: currPatrimonio });
     points.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     const filtered = points.filter(p => {
       const d = p.date || '';
@@ -159,7 +180,7 @@ const Dashboard = (props) => {
       return true;
     });
     return filtered.map(p => ({ ...p, date: p.date }));
-  }, [history, state, dateRange]);
+  }, [history, state, dateRange, saveDate]);
 
   return (
     <main style={{ flex: 1, background: 'var(--bg-dark)', minHeight: '100vh' }}>
@@ -304,7 +325,8 @@ const Dashboard = (props) => {
   {activeSection === null && chartDataPatrimonio && chartDataPatrimonio.length > 0 && (
     <div style={{ width: '100%', maxWidth: 1100, margin: '12px auto 24px', padding: 12, background: 'var(--bg-medium)', borderRadius: 12 }}>
       <h3 style={{ color: 'var(--bg-light)', margin: '6px 0 12px' }}>Patrimonio (totale asset)</h3>
-      <div style={{ width: '100%', height: 220 }}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+        <div style={{ flex: 1, minWidth: 0, height: 220 }}>
         <ResponsiveContainer>
           <AreaChart data={chartDataPatrimonio} margin={{ top: 8, right: 24, left: 64, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
@@ -312,13 +334,35 @@ const Dashboard = (props) => {
             <YAxis width={80} tickFormatter={v => formatCurrency(v, currency)} tick={{ fill: 'var(--text-muted)' }} />
             <Tooltip formatter={(val) => formatCurrency(val, currency)} />
             <Legend />
-            <Area type="monotone" dataKey="tfr" stroke="#f39c12" fill="rgba(243,156,18,0.08)" name="TFR" />
-            <Area type="monotone" dataKey="conti" stroke="#27ae60" fill="rgba(39,174,96,0.08)" name="Conti deposito" />
-            <Area type="monotone" dataKey="buoni" stroke="#2980b9" fill="rgba(41,128,185,0.06)" name="Buoni/Titoli" />
-            <Area type="monotone" dataKey="azioni" stroke="#8e44ad" fill="rgba(142,68,173,0.06)" name="Azioni" />
-            <Area type="monotone" dataKey="patrimonio" stroke="#9b59b6" fill="rgba(155,89,182,0.12)" name="Totale" />
+            {visibleSeries.tfr && <Area type="monotone" dataKey="tfr" stroke="#f39c12" fill="rgba(243,156,18,0.08)" stackId="patrimonio" name="TFR" />}
+            {visibleSeries.conti && <Area type="monotone" dataKey="conti" stroke="#27ae60" fill="rgba(39,174,96,0.08)" stackId="patrimonio" name="Conti deposito" />}
+            {visibleSeries.buoni && <Area type="monotone" dataKey="buoni" stroke="#2980b9" fill="rgba(41,128,185,0.06)" stackId="patrimonio" name="Buoni/Titoli" />}
+            {visibleSeries.azioni && <Area type="monotone" dataKey="azioni" stroke="#8e44ad" fill="rgba(142,68,173,0.06)" stackId="patrimonio" name="Azioni" />}
+            {visibleSeries.etf && <Area type="monotone" dataKey="etf" stroke="#16a085" fill="rgba(22,160,133,0.06)" stackId="patrimonio" name="ETF" />}
+            {visibleSeries.crypto && <Area type="monotone" dataKey="crypto" stroke="#d35400" fill="rgba(211,84,0,0.06)" stackId="patrimonio" name="Crypto" />}
+            {visibleSeries.oro && <Area type="monotone" dataKey="oro" stroke="#b7950b" fill="rgba(183,149,11,0.06)" stackId="patrimonio" name="Oro" />}
+            {/* total line intentionally removed; chart shows component series */}
           </AreaChart>
         </ResponsiveContainer>
+        </div>
+        <div style={{ width: 220, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ color: 'var(--bg-light)', fontWeight: 700 }}>Mostra serie</div>
+          {[
+            { key: 'tfr', label: 'TFR', color: '#f39c12' },
+            { key: 'conti', label: 'Conti deposito', color: '#27ae60' },
+            { key: 'buoni', label: 'Buoni/Titoli', color: '#2980b9' },
+            { key: 'azioni', label: 'Azioni', color: '#8e44ad' },
+            { key: 'etf', label: 'ETF', color: '#16a085' },
+            { key: 'crypto', label: 'Crypto', color: '#d35400' },
+            { key: 'oro', label: 'Oro', color: '#b7950b' },
+          ].map(s => (
+            <label key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)' }}>
+              <input type="checkbox" checked={!!visibleSeries[s.key]} onChange={() => setVisibleSeries(prev => ({ ...prev, [s.key]: !prev[s.key] }))} />
+              <span style={{ width: 12, height: 12, background: s.color, borderRadius: 4, display: 'inline-block' }} />
+              <span style={{ fontSize: 13 }}>{s.label}</span>
+            </label>
+          ))}
+        </div>
       </div>
     </div>
   )}
