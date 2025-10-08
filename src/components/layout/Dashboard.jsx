@@ -90,6 +90,20 @@ const Dashboard = (props) => {
     return { date, entrate, uscite };
   };
 
+  // build patrimonio total from snapshot
+  const buildPatrimonioFromSnapshot = (snap) => {
+    const st = snap && snap.state ? snap.state : snap || {};
+    const date = snap?.date || st?.date || '';
+
+    const tfr = st?.patrimonio?.tfr || 0;
+    const conti = (st?.patrimonio?.contiDeposito || []).reduce((s, c) => s + (c.saldo || 0), 0);
+    const buoni = (st?.patrimonio?.buoniTitoli || []).reduce((s, b) => s + (b.importo || 0), 0);
+    const azioni = (st?.patrimonio?.investimenti?.azioni || []).reduce((s, a) => s + (a.valore || 0), 0);
+
+    const patrimonio = tfr + conti + buoni + azioni;
+    return { date, patrimonio };
+  };
+
   const chartData = React.useMemo(() => {
     const points = (history || []).map(h => buildTotalsFromSnapshot(h));
 
@@ -113,6 +127,27 @@ const Dashboard = (props) => {
     });
     return filtered.map(p => ({ ...p, date: p.date }));
   }, [history, state]);
+
+  const chartDataPatrimonio = React.useMemo(() => {
+    const points = (history || []).map(h => buildPatrimonioFromSnapshot(h));
+
+    const currPatrimonio = (
+      (state?.patrimonio?.tfr || 0) +
+      ((state?.patrimonio?.contiDeposito || []).reduce ? state.patrimonio.contiDeposito.reduce((s, c) => s + (c.saldo || 0), 0) : 0) +
+      ((state?.patrimonio?.buoniTitoli || []).reduce ? state.patrimonio.buoniTitoli.reduce((s, b) => s + (b.importo || 0), 0) : 0) +
+      ((state?.patrimonio?.investimenti?.azioni || []).reduce ? state.patrimonio.investimenti.azioni.reduce((s, a) => s + (a.valore || 0), 0) : 0)
+    );
+
+    points.push({ date: new Date().toISOString().slice(0, 10), patrimonio: currPatrimonio });
+    points.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    const filtered = points.filter(p => {
+      const d = p.date || '';
+      if (dateRange.start && d < dateRange.start) return false;
+      if (dateRange.end && d > dateRange.end) return false;
+      return true;
+    });
+    return filtered.map(p => ({ ...p, date: p.date }));
+  }, [history, state, dateRange]);
 
   return (
     <main style={{ flex: 1, background: 'var(--bg-dark)', minHeight: '100vh' }}>
@@ -231,6 +266,24 @@ const Dashboard = (props) => {
             <Legend />
             <Area type="monotone" dataKey="entrate" stroke="#06d2fa" fill="rgba(6,210,250,0.12)" name="Entrate" />
             <Area type="monotone" dataKey="uscite" stroke="#ff6b6b" fill="rgba(255,107,107,0.08)" name="Uscite" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )}
+
+  {activeSection === null && chartDataPatrimonio && chartDataPatrimonio.length > 0 && (
+    <div style={{ width: '100%', maxWidth: 1100, margin: '12px auto 24px', padding: 12, background: 'var(--bg-medium)', borderRadius: 12 }}>
+      <h3 style={{ color: 'var(--bg-light)', margin: '6px 0 12px' }}>Patrimonio (totale asset)</h3>
+      <div style={{ width: '100%', height: 220 }}>
+        <ResponsiveContainer>
+          <AreaChart data={chartDataPatrimonio} margin={{ top: 8, right: 24, left: 64, bottom: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+            <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)' }} />
+            <YAxis width={80} tickFormatter={v => formatCurrency(v, currency)} tick={{ fill: 'var(--text-muted)' }} />
+            <Tooltip formatter={(val) => formatCurrency(val, currency)} />
+            <Legend />
+            <Area type="monotone" dataKey="patrimonio" stroke="#9b59b6" fill="rgba(155,89,182,0.12)" name="Patrimonio" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
