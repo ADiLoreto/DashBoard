@@ -128,7 +128,21 @@ const BigTab = ({
           }}
           onBlur={handleSave}
           onKeyDown={handleKeyDown}
-      style={{ fontFamily: 'Roboto Mono, monospace', color: '#222', fontSize: 32, textAlign: 'center', marginTop: 8, ...(valueStyle || {}) }}
+      style={{
+        fontFamily: 'Roboto Mono, monospace',
+        color: '#222',
+        fontSize: 32,
+        textAlign: 'center',
+        marginTop: 8,
+        width: '80%',
+        maxWidth: 320,
+        boxSizing: 'border-box',
+        padding: '6px 8px',
+        borderRadius: 8,
+        border: '1px solid var(--bg-medium)',
+        background: 'transparent',
+        ...(valueStyle || {})
+      }}
         />
       ) : (
         <div
