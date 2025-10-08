@@ -49,3 +49,11 @@ export const loadHistory = (username) => {
     return [];
   }
 };
+
+export const clearHistory = (username) => {
+  try {
+    localStorage.removeItem(keyFor('financeHistory', username));
+  } catch (e) {
+    // ignore
+  }
+};

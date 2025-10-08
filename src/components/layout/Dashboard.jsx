@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import BigTab from '../ui/BigTab';
-import { loadHistory, loadDraft, saveSnapshot, clearDraft } from '../../utils/storage';
+import { loadHistory, loadDraft, saveSnapshot, clearDraft, clearHistory } from '../../utils/storage';
 import { AuthContext } from '../../context/AuthContext';
 import Stipendio from '../sections/EntrateAttuali/Stipendio';
 import AssetPatrimonio from '../sections/AssetPatrimonio/AssetPatrimonio';
@@ -20,18 +20,27 @@ const Dashboard = (props) => {
   const [, setTick] = useState(0);
   const [showDraftMsg, setShowDraftMsg] = useState(!!loadDraft(username));
   const history = loadHistory(username);
-  const dateOptions = history.map(h => h.date);
-  const defaultStart = dateOptions.length ? dateOptions[dateOptions.length - 1] : new Date().toISOString().slice(0, 10);
+  const dateOptions = (history || []).map(h => h.date).filter(Boolean).sort();
+  const defaultStart = dateOptions.length ? dateOptions[0] : new Date().toISOString().slice(0, 10);
   const [dateRange, setDateRange] = useState({
     start: defaultStart,
     end: new Date().toISOString().slice(0, 10)
   });
   const [saveDate, setSaveDate] = useState(new Date().toISOString().slice(0, 10));
   const today = new Date().toISOString().slice(0, 10);
+  const [saveConfirm, setSaveConfirm] = useState('');
 
   const handleDateChange = (e) => {
     const { name, value } = e.target;
     setDateRange(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleResetHistory = () => {
+    if (!username) return;
+    clearHistory(username);
+    // force re-render by bumping tick
+    setTick(t => t + 1);
+    setShowDraftMsg(false);
   };
 
   // re-render when user settings update (currency change)
@@ -95,7 +104,14 @@ const Dashboard = (props) => {
 
     points.push({ date: new Date().toISOString().slice(0, 10), entrate: currEntrate, uscite: currUscite });
     points.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-    return points.map(p => ({ ...p, date: p.date }));
+    // filter by dateRange
+    const filtered = points.filter(p => {
+      const d = p.date || '';
+      if (dateRange.start && d < dateRange.start) return false;
+      if (dateRange.end && d > dateRange.end) return false;
+      return true;
+    });
+    return filtered.map(p => ({ ...p, date: p.date }));
   }, [history, state]);
 
   return (
@@ -139,6 +155,23 @@ const Dashboard = (props) => {
                 max={today}
               />
               <button className="today-btn" type="button" onClick={() => setSaveDate(today)}>Oggi</button>
+              <button
+                type="button"
+                onClick={() => {
+                    const draft = loadDraft(username);
+                    const snapshot = draft ? { ...draft, date: saveDate } : { date: saveDate, state };
+                    saveSnapshot(snapshot, username);
+                    clearDraft(username);
+                    setShowDraftMsg(false);
+                    setSaveConfirm(`Snapshot salvato: ${saveDate}`);
+                    setTimeout(() => setSaveConfirm(''), 3000);
+                    setTick(t => t + 1);
+                  }}
+                style={{ marginLeft: 8, background: '#06d2fa', color: '#012', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer' }}
+              >
+                Salva ora
+              </button>
+              <button style={{ marginLeft: 12, background: '#ff6b6b', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer' }} onClick={handleResetHistory}>Reset storico</button>
             </div>
           </div>
         </div>
@@ -169,14 +202,16 @@ const Dashboard = (props) => {
               fontSize: 18,
               cursor: 'pointer'
             }}
-            onClick={() => {
-              const draft = loadDraft(username);
-              if (draft) {
-                saveSnapshot({ ...draft, date: saveDate }, username);
-                clearDraft(username);
-                setShowDraftMsg(false);
-              }
-            }}
+                onClick={() => {
+                  const draft = loadDraft(username);
+                  const snapshot = draft ? { ...draft, date: saveDate } : { date: saveDate, state };
+                  saveSnapshot(snapshot, username);
+                  clearDraft(username);
+                  setShowDraftMsg(false);
+                  setSaveConfirm(`Snapshot salvato: ${saveDate}`);
+                  setTimeout(() => setSaveConfirm(''), 3000);
+                  setTick(t => t + 1);
+                }}
           >
             Salva ora
           </button>
@@ -187,11 +222,11 @@ const Dashboard = (props) => {
     <div style={{ width: '100%', maxWidth: 1100, margin: '12px auto 24px', padding: 12, background: 'var(--bg-medium)', borderRadius: 12 }}>
       <h3 style={{ color: 'var(--bg-light)', margin: '6px 0 12px' }}>Entrate vs Uscite (storico)</h3>
       <div style={{ width: '100%', height: 220 }}>
-        <ResponsiveContainer>
-          <AreaChart data={chartData} margin={{ top: 8, right: 24, left: 8, bottom: 8 }}>
+          <ResponsiveContainer>
+          <AreaChart data={chartData} margin={{ top: 8, right: 24, left: 64, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
             <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)' }} />
-            <YAxis tickFormatter={v => formatCurrency(v, currency)} tick={{ fill: 'var(--text-muted)' }} />
+            <YAxis width={80} tickFormatter={v => formatCurrency(v, currency)} tick={{ fill: 'var(--text-muted)' }} />
             <Tooltip formatter={(val) => formatCurrency(val, currency)} />
             <Legend />
             <Area type="monotone" dataKey="entrate" stroke="#06d2fa" fill="rgba(6,210,250,0.12)" name="Entrate" />
@@ -234,6 +269,12 @@ const Dashboard = (props) => {
           {/* ...altre sezioni... */}
         </div>
       )}
+
+  {saveConfirm && (
+    <div style={{ width: '100%', maxWidth: 1100, margin: '12px auto', padding: 12, background: 'var(--accent-cyan)', color: 'var(--bg-dark)', borderRadius: 12, textAlign: 'center', fontWeight: 700 }}>
+      {saveConfirm}
+    </div>
+  )}
       {/* floating save button when there are unsaved changes */}
       {dirty && (
         <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 60 }}>
@@ -245,6 +286,9 @@ const Dashboard = (props) => {
             }
             markSaved();
             setShowDraftMsg(false);
+            setSaveConfirm(`Snapshot salvato: ${saveDate}`);
+            setTimeout(() => setSaveConfirm(''), 3000);
+            setTick(t => t + 1);
           }} style={{ background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', padding: '12px 18px', borderRadius: 12, fontWeight: '700', cursor: 'pointer' }}>Salva modifiche</button>
         </div>
       )}
