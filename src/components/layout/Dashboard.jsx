@@ -5,6 +5,7 @@ import { AuthContext } from '../../context/AuthContext';
 import Stipendio from '../sections/EntrateAttuali/Stipendio';
 import AssetPatrimonio from '../sections/AssetPatrimonio/AssetPatrimonio';
 import Uscite from '../sections/Uscite/Uscite';
+import Liquidita from '../sections/Liquidita/Liquidita';
 import { useFinancialCalculations } from '../../hooks/useFinancialCalculations';
 import { FinanceContext } from '../../context/FinanceContext';
 import { formatCurrency, getUserCurrency } from '../../utils/format';
@@ -167,6 +168,7 @@ const Dashboard = (props) => {
         <div style={{ padding: 32 }}>
           {activeSection === 'Entrate Attuali' && <Stipendio dateRange={dateRange} />}
           {activeSection === 'Asset Patrimonio' && <AssetPatrimonio dateRange={dateRange} />}
+          {activeSection === 'Liquidità' && <Liquidita dateRange={dateRange} />}
           {activeSection === 'Uscite' && <Uscite dateRange={dateRange} />}
           {/* ...altre sezioni... */}
         </div>

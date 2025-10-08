@@ -78,6 +78,22 @@ const financeReducer = (state, action) => {
 
     case 'ADD_USCITA_VARIABILE':
       return { ...state, uscite: { ...state.uscite, variabili: [ ...(state.uscite.variabili || []), action.payload ] } };
+    case 'ADD_LIQUIDITA_CONTO':
+      return { ...state, liquidita: { ...state.liquidita, contiCorrenti: [ ...(state.liquidita.contiCorrenti || []), action.payload ] } };
+    case 'UPDATE_LIQUIDITA_CONTO':
+      return { ...state, liquidita: { ...state.liquidita, contiCorrenti: (state.liquidita.contiCorrenti || []).map(c => c.id === action.payload.id ? { ...c, ...action.payload } : c) } };
+    case 'DELETE_LIQUIDITA_CONTO':
+      return { ...state, liquidita: { ...state.liquidita, contiCorrenti: (state.liquidita.contiCorrenti || []).filter(c => c.id !== action.payload.id) } };
+
+    case 'ADD_LIQUIDITA_CARTE':
+      return { ...state, liquidita: { ...state.liquidita, cartePrepagate: [ ...(state.liquidita.cartePrepagate || []), action.payload ] } };
+    case 'UPDATE_LIQUIDITA_CARTE':
+      return { ...state, liquidita: { ...state.liquidita, cartePrepagate: (state.liquidita.cartePrepagate || []).map(c => c.id === action.payload.id ? { ...c, ...action.payload } : c) } };
+    case 'DELETE_LIQUIDITA_CARTE':
+      return { ...state, liquidita: { ...state.liquidita, cartePrepagate: (state.liquidita.cartePrepagate || []).filter(c => c.id !== action.payload.id) } };
+
+    case 'UPDATE_LIQUIDITA_CONTANTE':
+      return { ...state, liquidita: { ...state.liquidita, contante: action.payload.contante } };
     case 'UPDATE_USCITA_VARIABILE':
       return { ...state, uscite: { ...state.uscite, variabili: (state.uscite.variabili || []).map(u => u.id === action.payload.id ? { ...u, ...action.payload } : u) } };
     case 'DELETE_USCITA_VARIABILE':
