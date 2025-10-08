@@ -78,6 +78,12 @@ const financeReducer = (state, action) => {
 
     case 'ADD_USCITA_VARIABILE':
       return { ...state, uscite: { ...state.uscite, variabili: [ ...(state.uscite.variabili || []), action.payload ] } };
+    case 'ADD_PROGETTO_EXTRA':
+      return { ...state, progettiExtra: [ ...(state.progettiExtra || []), action.payload ] };
+    case 'UPDATE_PROGETTO_EXTRA':
+      return { ...state, progettiExtra: (state.progettiExtra || []).map(p => p.id === action.payload.id ? { ...p, ...action.payload } : p) };
+    case 'DELETE_PROGETTO_EXTRA':
+      return { ...state, progettiExtra: (state.progettiExtra || []).filter(p => p.id !== action.payload.id) };
     case 'ADD_LIQUIDITA_CONTO':
       return { ...state, liquidita: { ...state.liquidita, contiCorrenti: [ ...(state.liquidita.contiCorrenti || []), action.payload ] } };
     case 'UPDATE_LIQUIDITA_CONTO':

@@ -6,6 +6,7 @@ import Stipendio from '../sections/EntrateAttuali/Stipendio';
 import AssetPatrimonio from '../sections/AssetPatrimonio/AssetPatrimonio';
 import Uscite from '../sections/Uscite/Uscite';
 import Liquidita from '../sections/Liquidita/Liquidita';
+import ProgettiExtra from '../sections/ProgettiExtra/ProgettiExtra';
 import { useFinancialCalculations } from '../../hooks/useFinancialCalculations';
 import { FinanceContext } from '../../context/FinanceContext';
 import { formatCurrency, getUserCurrency } from '../../utils/format';
@@ -14,7 +15,7 @@ const Dashboard = (props) => {
   const { activeSection, setActiveSection } = props;
   const { user } = useContext(AuthContext);
   const username = user?.username;
-  const { dirty, markSaved } = useContext(FinanceContext);
+  const { dirty, markSaved, state } = useContext(FinanceContext);
   const [, setTick] = useState(0);
   const [showDraftMsg, setShowDraftMsg] = useState(!!loadDraft(username));
   const history = loadHistory(username);
@@ -43,11 +44,14 @@ const Dashboard = (props) => {
   const { totaleEntrate, totalePatrimonio, totaleLiquidita } = useFinancialCalculations();
 
   const currency = getUserCurrency(username);
+  const totaleProgetti = (state.progettiExtra || []).reduce((s, p) => s + (p.valore || 0), 0);
+
   const totals = {
     'Entrate Attuali': { raw: totaleEntrate, label: formatCurrency(totaleEntrate, currency) },
     'Asset Patrimonio': { raw: totalePatrimonio, label: formatCurrency(totalePatrimonio, currency) },
     'Liquidità': { raw: totaleLiquidita, label: formatCurrency(totaleLiquidita, currency) },
     'Uscite': { raw: 1200, label: formatCurrency(1200, currency) },
+    'Progetti Extra': { raw: totaleProgetti, label: formatCurrency(totaleProgetti, currency) },
   };
 
   // Icone esempio (puoi usare emoji o icone da una libreria)
@@ -55,7 +59,8 @@ const Dashboard = (props) => {
     'Entrate Attuali': '💰',
     'Asset Patrimonio': '🏦',
     'Liquidità': '💳',
-    'Uscite': '💸',
+  'Uscite': '💸',
+  'Progetti Extra': '🗂️',
   };
 
   return (
@@ -170,6 +175,7 @@ const Dashboard = (props) => {
           {activeSection === 'Asset Patrimonio' && <AssetPatrimonio dateRange={dateRange} />}
           {activeSection === 'Liquidità' && <Liquidita dateRange={dateRange} />}
           {activeSection === 'Uscite' && <Uscite dateRange={dateRange} />}
+          {activeSection === 'Progetti Extra' && <ProgettiExtra dateRange={dateRange} />}
           {/* ...altre sezioni... */}
         </div>
       )}

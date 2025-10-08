@@ -1,11 +1,20 @@
 import React, { useContext } from 'react';
 import { FinanceContext } from '../../../context/FinanceContext';
-import BigTab from '../../ui/BigTab';
+import EntriesGrid from '../../ui/EntriesGrid';
 
 const ProgettiExtra = () => {
-  const { state } = useContext(FinanceContext);
+  const { state, dispatch } = useContext(FinanceContext);
   const progetti = state.progettiExtra || [];
-  const totale = progetti.reduce((sum, p) => sum + (p.valore || 0), 0);
+
+  const addProject = (data) => {
+    const id = Math.random().toString(36).slice(2,9);
+    // normalize to 'valore' in state so rendering + totals are consistent
+    dispatch({ type: 'ADD_PROGETTO_EXTRA', payload: { id, titolo: data.titolo, valore: Number(data.importo) } });
+  };
+  const updateProject = (payload) => dispatch({ type: 'UPDATE_PROGETTO_EXTRA', payload });
+  const deleteProject = (id) => dispatch({ type: 'DELETE_PROGETTO_EXTRA', payload: { id } });
+
+  const totale = progetti.reduce((sum, p) => sum + (p.valore !== undefined ? p.valore : (p.importo || 0)), 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
@@ -16,10 +25,15 @@ const ProgettiExtra = () => {
           <div style={{ color: 'var(--accent-cyan)', fontSize: 22, fontWeight: 700 }}>{totale.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
         </div>
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 32 }}>
-        {progetti.map(p => (
-          <BigTab key={p.id} title={p.titolo || p.name || 'Progetto'} value={p.valore} titleStyle={{ fontSize: 22 }} valueStyle={{ fontSize: 22 }} />
-        ))}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <EntriesGrid
+          entries={progetti.map(p => ({ id: p.id, titolo: p.titolo || p.name || 'Progetto', importo: (p.valore !== undefined ? p.valore : p.importo) }))}
+          onAdd={addProject}
+          onUpdate={(payload) => updateProject({ id: payload.id, titolo: payload.titolo, valore: payload.importo })}
+          onDelete={(id) => deleteProject(id)}
+          sectionTitle="Progetti Extra"
+        />
       </div>
     </div>
   );
