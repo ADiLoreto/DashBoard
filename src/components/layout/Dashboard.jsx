@@ -285,6 +285,30 @@ const Dashboard = (props) => {
           </button>
         </div>
       )}
+    {/* --- big tabs: moved up so they appear above charts --- */}
+    {activeSection === null && (
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 20,
+          margin: '12px 0',
+        }}
+      >
+        {Object.keys(totals).map(section => (
+          <BigTab
+            key={section}
+            title={section}
+            value={typeof totals[section] === 'object' ? totals[section].raw : totals[section]}
+            icon={icons[section]}
+            allowEdit={false}
+            onClick={() => setActiveSection(section)}
+          />
+        ))}
+      </div>
+    )}
   {/* --- chart on overview --- */}
   {activeSection === null && chartData && chartData.length > 0 && (
     <div style={{ width: '100%', maxWidth: 1100, margin: '12px auto 24px', padding: 12, background: 'var(--bg-medium)', borderRadius: 12 }}>
@@ -376,38 +400,16 @@ const Dashboard = (props) => {
     </div>
   )}
 
-  {activeSection === null ? (
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: '80vh',
-            gap: 32,
-          }}
-        >
-          {Object.keys(totals).map(section => (
-            <BigTab
-              key={section}
-              title={section}
-              value={typeof totals[section] === 'object' ? totals[section].raw : totals[section]}
-              icon={icons[section]}
-              allowEdit={false}
-              onClick={() => setActiveSection(section)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div style={{ padding: 32 }}>
-          {activeSection === 'Entrate Attuali' && <Stipendio dateRange={dateRange} />}
-          {activeSection === 'Asset Patrimonio' && <AssetPatrimonio dateRange={dateRange} />}
-          {activeSection === 'Liquidità' && <Liquidita dateRange={dateRange} />}
-          {activeSection === 'Uscite' && <Uscite dateRange={dateRange} />}
-          {activeSection === 'Progetti Extra' && <ProgettiExtra dateRange={dateRange} />}
-          {/* ...altre sezioni... */}
-        </div>
-      )}
+  {activeSection !== null && (
+    <div style={{ padding: 32 }}>
+      {activeSection === 'Entrate Attuali' && <Stipendio dateRange={dateRange} />}
+      {activeSection === 'Asset Patrimonio' && <AssetPatrimonio dateRange={dateRange} />}
+      {activeSection === 'Liquidità' && <Liquidita dateRange={dateRange} />}
+      {activeSection === 'Uscite' && <Uscite dateRange={dateRange} />}
+      {activeSection === 'Progetti Extra' && <ProgettiExtra dateRange={dateRange} />}
+      {/* ...altre sezioni... */}
+    </div>
+  )}
 
   {saveConfirm && (
     <div style={{ width: '100%', maxWidth: 1100, margin: '12px auto', padding: 12, background: 'var(--accent-cyan)', color: 'var(--bg-dark)', borderRadius: 12, textAlign: 'center', fontWeight: 700 }}>
