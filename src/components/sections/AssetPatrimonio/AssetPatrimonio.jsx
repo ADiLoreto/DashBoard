@@ -264,7 +264,18 @@ const AssetPatrimonio = () => {
                   {/* ...DonutChart rimosso dalla sezione espansa... */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start', justifyContent: 'center' }}>
                     {conti.map(c => (
-                      <BigTab key={c.id} title={c.titolo || c.name || 'Conto'} value={formatCurrency(Number(c.saldo||0), currency)} onClick={() => openEditConto(c)} titleStyle={{ fontSize: 22 }} />
+                        <BigTab
+                        key={c.id}
+                        title={c.titolo || c.name || 'Conto'}
+                        value={c.saldo}
+                        titleStyle={{ fontSize: 22 }}
+                        valueStyle={{ fontSize: 20, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
+                        onUpdate={update => {
+                          if (update.title !== undefined) dispatch({ type: 'UPDATE_PATRIMONIO_CONTO', payload: { ...c, titolo: update.title } });
+                          if (update.value !== undefined) dispatch({ type: 'UPDATE_PATRIMONIO_CONTO', payload: { ...c, saldo: Number(update.value) } });
+                        }}
+                        onDelete={() => handleDeleteConto(c.id)}
+                      />
                     ))}
                     <div className="big-tab add-tab" onClick={() => setShowAddModal(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
@@ -298,7 +309,18 @@ const AssetPatrimonio = () => {
                   {/* ...DonutChart rimosso dalla sezione espansa... */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
                     {buoni.map(b => (
-                      <BigTab key={b.id} title={b.titolo || b.name || 'Buono'} value={formatCurrency(getValue(b), currency)} onClick={() => openEditBuono(b)} titleStyle={{ fontSize: 22 }} />
+                      <BigTab
+                        key={b.id}
+                        title={b.titolo || b.name || 'Buono'}
+                        value={b.importo}
+                        titleStyle={{ fontSize: 22 }}
+                        valueStyle={{ fontSize: 20, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
+                        onUpdate={update => {
+                          if (update.title !== undefined) dispatch({ type: 'UPDATE_BUONO_TITOLO', payload: { ...b, titolo: update.title } });
+                          if (update.value !== undefined) dispatch({ type: 'UPDATE_BUONO_TITOLO', payload: { ...b, importo: Number(update.value) } });
+                        }}
+                        onDelete={() => handleDeleteBuono(b.id)}
+                      />
                     ))}
                     <div className="big-tab add-tab" onClick={() => setShowAddBuono(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
@@ -332,7 +354,18 @@ const AssetPatrimonio = () => {
                   {/* ...DonutChart rimosso dalla sezione espansa... */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
                     {azioni.map(a => (
-                      <BigTab key={a.id} title={a.titolo || a.name || 'Azione'} value={formatCurrency(getValue(a), currency)} onClick={() => openEditAzione(a)} titleStyle={{ fontSize: 22 }} />
+                      <BigTab
+                        key={a.id}
+                        title={a.titolo || a.name || 'Azione'}
+                        value={a.valore}
+                        titleStyle={{ fontSize: 22 }}
+                        valueStyle={{ fontSize: 20, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
+                        onUpdate={update => {
+                          if (update.title !== undefined) dispatch({ type: 'UPDATE_INVESTIMENTO_AZIONE', payload: { ...a, titolo: update.title } });
+                          if (update.value !== undefined) dispatch({ type: 'UPDATE_INVESTIMENTO_AZIONE', payload: { ...a, valore: Number(update.value) } });
+                        }}
+                        onDelete={() => handleDeleteAzione(a.id)}
+                      />
                     ))}
                     <div className="big-tab add-tab" onClick={() => setShowAddAzione(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
@@ -365,7 +398,18 @@ const AssetPatrimonio = () => {
                   {/* ...DonutChart rimosso dalla sezione espansa... */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
                     {etf.map(e => (
-                      <BigTab key={e.id} title={e.titolo || e.name || 'ETF'} value={formatCurrency(getValue(e), currency)} onClick={() => openEditEtf(e)} titleStyle={{ fontSize: 22 }} />
+                      <BigTab
+                        key={e.id}
+                        title={e.titolo || e.name || 'ETF'}
+                        value={e.valore}
+                        titleStyle={{ fontSize: 22 }}
+                        valueStyle={{ fontSize: 20, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
+                        onUpdate={update => {
+                          if (update.title !== undefined) dispatch({ type: 'UPDATE_INVESTIMENTO_ETF', payload: { ...e, titolo: update.title } });
+                          if (update.value !== undefined) dispatch({ type: 'UPDATE_INVESTIMENTO_ETF', payload: { ...e, valore: Number(update.value) } });
+                        }}
+                        onDelete={() => handleDeleteEtf(e.id)}
+                      />
                     ))}
                     <div className="big-tab add-tab" onClick={() => setShowAddEtf(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
@@ -398,7 +442,18 @@ const AssetPatrimonio = () => {
                   {/* ...DonutChart rimosso dalla sezione espansa... */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
                     {crypto.map(c => (
-                      <BigTab key={c.id} title={c.titolo || c.name || 'Crypto'} value={formatCurrency(getValue(c), currency)} onClick={() => openEditCrypto(c)} titleStyle={{ fontSize: 22 }} />
+                      <BigTab
+                        key={c.id}
+                        title={c.titolo || c.name || 'Crypto'}
+                        value={c.valore}
+                        titleStyle={{ fontSize: 22 }}
+                        valueStyle={{ fontSize: 20, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
+                        onUpdate={update => {
+                          if (update.title !== undefined) dispatch({ type: 'UPDATE_INVESTIMENTO_CRYPTO', payload: { ...c, titolo: update.title } });
+                          if (update.value !== undefined) dispatch({ type: 'UPDATE_INVESTIMENTO_CRYPTO', payload: { ...c, valore: Number(update.value) } });
+                        }}
+                        onDelete={() => handleDeleteCrypto(c.id)}
+                      />
                     ))}
                     <div className="big-tab add-tab" onClick={() => setShowAddCrypto(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
@@ -431,7 +486,18 @@ const AssetPatrimonio = () => {
                   {/* ...DonutChart rimosso dalla sezione espansa... */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
                     {oro.map(o => (
-                      <BigTab key={o.id} title={o.titolo || o.name || 'Oro'} value={formatCurrency(getValue(o), currency)} onClick={() => openEditOro(o)} titleStyle={{ fontSize: 22 }} />
+                      <BigTab
+                        key={o.id}
+                        title={o.titolo || o.name || 'Oro'}
+                        value={o.valore}
+                        titleStyle={{ fontSize: 22 }}
+                        valueStyle={{ fontSize: 20, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
+                        onUpdate={update => {
+                          if (update.title !== undefined) dispatch({ type: 'UPDATE_ORO', payload: { ...o, titolo: update.title } });
+                          if (update.value !== undefined) dispatch({ type: 'UPDATE_ORO', payload: { ...o, valore: Number(update.value) } });
+                        }}
+                        onDelete={() => handleDeleteOro(o.id)}
+                      />
                     ))}
                     <div className="big-tab add-tab" onClick={() => setShowAddOro(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
@@ -459,25 +525,6 @@ const AssetPatrimonio = () => {
           </div>
         )}
 
-        {/* Edit modal for Conto */}
-        {showEditModal && editingConto && (
-          <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(48, 57, 67, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <div style={{ background: 'var(--bg-light)', padding: 32, borderRadius: 16, minWidth: 420, boxShadow: '0 8px 48px rgba(0,0,0,0.35)' }}>
-              <h3 style={{ color: 'var(--bg-dark)', fontSize: 24 }}>Modifica Conto</h3>
-              <div style={{ display: 'grid', gap: 12, marginTop: 8 }}>
-                <input type="text" value={editingConto.titolo || ''} onChange={e=>setEditingConto(prev=>({ ...prev, titolo: e.target.value }))} style={{ padding: 12, fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }} />
-                <input type="number" value={editingConto.saldo || 0} onChange={e=>setEditingConto(prev=>({ ...prev, saldo: Number(e.target.value) }))} style={{ padding: 12, fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }} />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginTop: 16 }}>
-                <button onClick={()=>handleDeleteConto(editingConto.id)} style={{ background: '#ff6b6b', color: 'white', border: 'none', borderRadius: 8, padding: '10px 20px' }}>Elimina</button>
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <button onClick={()=>setShowEditModal(false)} style={{ background: 'var(--bg-medium)', color: 'var(--bg-light)', border: 'none', borderRadius: 8, padding: '10px 20px' }}>Annulla</button>
-                  <button onClick={handleUpdateConto} style={{ background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', borderRadius: 8, padding: '10px 20px' }}>Salva</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Buoni modals */}
         {showAddBuono && (

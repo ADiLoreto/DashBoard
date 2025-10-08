@@ -64,54 +64,71 @@ const Stipendio = () => {
     setEditingEntry(null);
   };
 
+  // Calcolo totale entrate
+  const totaleEntrate =
+    (state.entrate.stipendio.netto || 0) +
+    (state.entrate.bonus ? state.entrate.bonus.reduce((sum, b) => sum + (b.importo || 0), 0) : 0) +
+    (state.entrate.altreEntrate ? state.entrate.altreEntrate.reduce((sum, e) => sum + (e.importo !== undefined ? e.importo : Number(e.value) || 0), 0) : 0);
+
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 32 }}>
-      <BigTab
-        title={isEditingTitle ? (
-          <input
-            type="text"
-            value={title}
-            onChange={handleTitleChange}
-            onBlur={handleTitleSave}
-            autoFocus
-            style={{ fontSize: 32, fontWeight: 700, background: 'var(--bg-light)', color: 'var(--bg-dark)', border: 'none', borderRadius: 8, padding: '4px 12px' }}
-          />
-        ) : (
-          <span style={{ cursor: 'pointer' }} onClick={handleTitleEdit}>{title}</span>
-        )}
-        value={state.entrate.stipendio.netto + ' €'}
-        onClick={openEditModal}
-      />
-      {(state.entrate.altreEntrate || []).map((entry) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+      {/* Totale entrate */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
+        <h2 style={{ color: 'var(--bg-light)', margin: 0 }}>Entrate Attuali</h2>
+        <div style={{ background: 'var(--bg-medium)', padding: '12px 16px', borderRadius: 12, minWidth: 180, display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+          <div style={{ color: 'var(--text-muted)', marginBottom: 6, fontSize: 13 }}>Totale entrate</div>
+          <div style={{ color: 'var(--accent-cyan)', fontSize: 22, fontWeight: 700 }}>{totaleEntrate.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 32 }}>
         <BigTab
-          key={entry.id}
-          title={entry.titolo || entry.title}
-          value={(entry.importo !== undefined ? entry.importo : entry.value) + ' €'}
-          onClick={() => openEntryEdit(entry)}
+          title={title}
+          value={state.entrate.stipendio.netto}
+          titleStyle={{ fontSize: 22 }}
+          valueStyle={{ fontSize: 22, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
+          allowTitleEdit={false}
+          onUpdate={update => {
+            if (update.value !== undefined) handleSave({ netto: Number(update.value) });
+          }}
         />
-      ))}
-      <div
-        className="big-tab add-tab"
-        style={{
-          background: 'var(--bg-light)',
-          color: 'var(--text-muted)',
-          border: '2px dashed var(--bg-medium)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minWidth: 260,
-          minHeight: 180,
-          borderRadius: 16,
-          cursor: 'pointer',
-          margin: 24,
-          fontSize: 48,
-          transition: 'all 0.2s'
-        }}
-  onClick={() => setShowAddModal(true)}
-      >
-        <span style={{ fontSize: 64, color: 'var(--accent-cyan)' }}>+</span>
-        <div style={{ fontSize: 18, marginTop: 8 }}>Aggiungi nuova voce</div>
+        {(state.entrate.altreEntrate || []).map((entry) => (
+            <BigTab
+            key={entry.id}
+            title={entry.titolo || entry.title}
+            value={entry.importo !== undefined ? entry.importo : entry.value}
+            titleStyle={{ fontSize: 22 }}
+              valueStyle={{ fontSize: 22, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
+            onUpdate={update => {
+              if (update.title !== undefined) handleUpdateEntry({ ...entry, titolo: update.title });
+              if (update.value !== undefined) handleUpdateEntry({ ...entry, importo: Number(update.value) });
+            }}
+            onDelete={() => handleDeleteEntry(entry.id)}
+          />
+        ))}
+        <div
+          className="big-tab add-tab"
+          style={{
+            background: 'var(--bg-light)',
+            color: 'var(--text-muted)',
+            border: '2px dashed var(--bg-medium)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: 260,
+            minHeight: 180,
+            borderRadius: 16,
+            cursor: 'pointer',
+            margin: 24,
+            fontSize: 48,
+            transition: 'all 0.2s'
+          }}
+          onClick={() => setShowAddModal(true)}
+        >
+          <span style={{ fontSize: 64, color: 'var(--accent-cyan)' }}>+</span>
+          <div style={{ fontSize: 18, marginTop: 8 }}>Aggiungi nuova voce</div>
+        </div>
       </div>
 
       {showAddModal && (

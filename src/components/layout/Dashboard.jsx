@@ -43,10 +43,10 @@ const Dashboard = (props) => {
 
   const currency = getUserCurrency(username);
   const totals = {
-    'Entrate Attuali': formatCurrency(totaleEntrate, currency),
-    'Asset Patrimonio': formatCurrency(totalePatrimonio, currency),
-    'Liquidità': formatCurrency(totaleLiquidita, currency),
-    'Uscite': formatCurrency(1200, currency),
+    'Entrate Attuali': { raw: totaleEntrate, label: formatCurrency(totaleEntrate, currency) },
+    'Asset Patrimonio': { raw: totalePatrimonio, label: formatCurrency(totalePatrimonio, currency) },
+    'Liquidità': { raw: totaleLiquidita, label: formatCurrency(totaleLiquidita, currency) },
+    'Uscite': { raw: 1200, label: formatCurrency(1200, currency) },
   };
 
   // Icone esempio (puoi usare emoji o icone da una libreria)
@@ -156,8 +156,9 @@ const Dashboard = (props) => {
             <BigTab
               key={section}
               title={section}
-              value={totals[section]}
+              value={typeof totals[section] === 'object' ? totals[section].raw : totals[section]}
               icon={icons[section]}
+              allowEdit={false}
               onClick={() => setActiveSection(section)}
             />
           ))}
