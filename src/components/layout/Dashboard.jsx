@@ -10,6 +10,7 @@ import ProgettiExtra from '../sections/ProgettiExtra/ProgettiExtra';
 import { useFinancialCalculations } from '../../hooks/useFinancialCalculations';
 import { FinanceContext } from '../../context/FinanceContext';
 import { formatCurrency, getUserCurrency } from '../../utils/format';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts';
 
 const Dashboard = (props) => {
   const { activeSection, setActiveSection } = props;
@@ -62,6 +63,40 @@ const Dashboard = (props) => {
   'Uscite': '💸',
   'Progetti Extra': '🗂️',
   };
+
+  // build a point (entrate/uscite) from a saved snapshot object
+  const buildTotalsFromSnapshot = (snap) => {
+    const st = snap && snap.state ? snap.state : snap || {};
+    const date = snap?.date || st?.date || '';
+
+    const entrate =
+      (st?.entrate?.stipendio?.netto || 0) +
+      ((st?.entrate?.bonus || []).reduce ? st.entrate.bonus.reduce((s, b) => s + (b.importo || 0), 0) : 0) +
+      ((st?.entrate?.altreEntrate || []).reduce ? st.entrate.altreEntrate.reduce((s, e) => s + (e.importo || 0), 0) : 0);
+
+    const uscite =
+      ((st?.uscite?.fisse || []).reduce ? st.uscite.fisse.reduce((s, u) => s + (u.importo || 0), 0) : 0) +
+      ((st?.uscite?.variabili || []).reduce ? st.uscite.variabili.reduce((s, u) => s + (u.importo || 0), 0) : 0);
+
+    return { date, entrate, uscite };
+  };
+
+  const chartData = React.useMemo(() => {
+    const points = (history || []).map(h => buildTotalsFromSnapshot(h));
+
+    const currEntrate =
+      (state?.entrate?.stipendio?.netto || 0) +
+      ((state?.entrate?.bonus || []).reduce ? state.entrate.bonus.reduce((s, b) => s + (b.importo || 0), 0) : 0) +
+      ((state?.entrate?.altreEntrate || []).reduce ? state.entrate.altreEntrate.reduce((s, e) => s + (e.importo || 0), 0) : 0);
+
+    const currUscite =
+      ((state?.uscite?.fisse || []).reduce ? state.uscite.fisse.reduce((s, u) => s + (u.importo || 0), 0) : 0) +
+      ((state?.uscite?.variabili || []).reduce ? state.uscite.variabili.reduce((s, u) => s + (u.importo || 0), 0) : 0);
+
+    points.push({ date: new Date().toISOString().slice(0, 10), entrate: currEntrate, uscite: currUscite });
+    points.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    return points.map(p => ({ ...p, date: p.date }));
+  }, [history, state]);
 
   return (
     <main style={{ flex: 1, background: 'var(--bg-dark)', minHeight: '100vh' }}>
@@ -147,6 +182,26 @@ const Dashboard = (props) => {
           </button>
         </div>
       )}
+  {/* --- chart on overview --- */}
+  {activeSection === null && chartData && chartData.length > 0 && (
+    <div style={{ width: '100%', maxWidth: 1100, margin: '12px auto 24px', padding: 12, background: 'var(--bg-medium)', borderRadius: 12 }}>
+      <h3 style={{ color: 'var(--bg-light)', margin: '6px 0 12px' }}>Entrate vs Uscite (storico)</h3>
+      <div style={{ width: '100%', height: 220 }}>
+        <ResponsiveContainer>
+          <AreaChart data={chartData} margin={{ top: 8, right: 24, left: 8, bottom: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+            <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)' }} />
+            <YAxis tickFormatter={v => formatCurrency(v, currency)} tick={{ fill: 'var(--text-muted)' }} />
+            <Tooltip formatter={(val) => formatCurrency(val, currency)} />
+            <Legend />
+            <Area type="monotone" dataKey="entrate" stroke="#06d2fa" fill="rgba(6,210,250,0.12)" name="Entrate" />
+            <Area type="monotone" dataKey="uscite" stroke="#ff6b6b" fill="rgba(255,107,107,0.08)" name="Uscite" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )}
+
   {activeSection === null ? (
         <div
           style={{
