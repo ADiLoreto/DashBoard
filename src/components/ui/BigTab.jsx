@@ -10,6 +10,9 @@ const BigTab = ({
   onUpdate,
   onDelete,
   onClick,
+  onToggle,
+  toggleValue,
+  showToggleAlways = false,
   allowEdit = true,
   allowTitleEdit, // optional override
   allowValueEdit, // optional override
@@ -172,6 +175,63 @@ const BigTab = ({
         >
           🗑️
         </button>
+      )}
+      {(hovered || showToggleAlways) && typeof onToggle === 'function' && (
+        <div
+          onClick={(e) => { e.stopPropagation(); onToggle(); }}
+          style={{
+            position: 'absolute',
+            bottom: 12,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <div
+            role="switch"
+            aria-checked={!!toggleValue}
+            style={{
+              position: 'relative',
+              width: 120,
+              height: 28,
+              borderRadius: 999,
+              padding: 5,
+              boxSizing: 'border-box',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: toggleValue ? 'flex-end' : 'flex-start',
+              background: toggleValue ? '#ff6b6b' : 'var(--accent-cyan)',
+              cursor: 'pointer',
+              border: '1px solid var(--bg-medium)'
+            }}
+            title={toggleValue ? 'Segna come entrata' : 'Segna come costo'}
+          >
+            <div style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: 0,
+              bottom: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              pointerEvents: 'none'
+            }}>
+              <span style={{ color: '#000', fontSize: 13, fontWeight: 700, textTransform: 'lowercase' }}>{toggleValue ? 'uscita' : 'entrata'}</span>
+            </div>
+            <div style={{
+              width: 24,
+              height: 24,
+              borderRadius: '50%',
+              background: '#fff',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+              transition: 'all 0.18s ease'
+            }} />
+          </div>
+        </div>
       )}
       {/* Subtitle / small info under the card */}
       {subtitle && (

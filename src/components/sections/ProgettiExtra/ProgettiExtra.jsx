@@ -13,6 +13,11 @@ const ProgettiExtra = () => {
   };
   const updateProject = (payload) => dispatch({ type: 'UPDATE_PROGETTO_EXTRA', payload });
   const deleteProject = (id) => dispatch({ type: 'DELETE_PROGETTO_EXTRA', payload: { id } });
+  const toggleIsCosto = (id) => {
+    const p = progetti.find(x => x.id === id);
+    if (!p) return;
+    dispatch({ type: 'UPDATE_PROGETTO_EXTRA', payload: { id, isCosto: !p.isCosto } });
+  };
 
   const totale = progetti.reduce((sum, p) => sum + (p.valore !== undefined ? p.valore : (p.importo || 0)), 0);
 
@@ -28,11 +33,13 @@ const ProgettiExtra = () => {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         <EntriesGrid
-          entries={progetti.map(p => ({ id: p.id, titolo: p.titolo || p.name || 'Progetto', importo: (p.valore !== undefined ? p.valore : p.importo) }))}
+          entries={progetti.map(p => ({ id: p.id, titolo: p.titolo || p.name || 'Progetto', importo: (p.valore !== undefined ? p.valore : p.importo), isCosto: !!p.isCosto }))}
           onAdd={addProject}
           onUpdate={(payload) => updateProject({ id: payload.id, titolo: payload.titolo, valore: payload.importo })}
           onDelete={(id) => deleteProject(id)}
+          onToggle={(id) => toggleIsCosto(id)}
           sectionTitle="Progetti Extra"
+          toggleAlways={true}
         />
       </div>
     </div>

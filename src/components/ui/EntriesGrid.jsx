@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import BigTab from './BigTab';
 
 // props:
-// entries: array of { id, titolo, importo }
-// onAdd(payload), onUpdate(payload), onDelete(id)
-const EntriesGrid = ({ entries = [], onAdd, onUpdate, onDelete, sectionTitle = '' }) => {
+// entries: array of { id, titolo, importo, isCosto }
+// onAdd(payload), onUpdate(payload), onDelete(id), onToggle(id)
+const EntriesGrid = ({ entries = [], onAdd, onUpdate, onDelete, onToggle, sectionTitle = '', toggleAlways = false }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [draft, setDraft] = useState({ titolo: '', importo: '' });
 
@@ -36,6 +36,9 @@ const EntriesGrid = ({ entries = [], onAdd, onUpdate, onDelete, sectionTitle = '
               onUpdate(payload);
             }}
             onDelete={() => onDelete(e.id)}
+            onToggle={() => onToggle && onToggle(e.id)}
+            toggleValue={e.isCosto}
+            showToggleAlways={toggleAlways}
           />
         ))}
 
