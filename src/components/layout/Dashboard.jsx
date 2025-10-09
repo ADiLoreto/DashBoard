@@ -139,9 +139,14 @@ const Dashboard = (props) => {
   const buildLiquiditaFromSnapshot = (snap) => {
     const st = snap && snap.state ? snap.state : snap || {};
     const date = snap?.date || st?.date || '';
-    const conti = (st?.liquidita?.conti || []).reduce((s, c) => s + (c.saldo || c.importo || 0), 0);
-    const carte = (st?.liquidita?.carte || []).reduce((s, c) => s + (c.saldo || c.importo || 0), 0);
-    const altro = (st?.liquidita?.altro || []).reduce((s, a) => s + (a.valore || a.importo || 0), 0);
+
+    // fallback: some snapshots may keep cash accounts under patrimonio.contiDeposito
+    const contiSource = st?.liquidita?.conti || st?.patrimonio?.contiDeposito || [];
+    const conti = (contiSource || []).reduce((s, c) => s + (c.saldo || c.importo || 0), 0);
+    const carteSource = st?.liquidita?.carte || [];
+    const carte = (carteSource || []).reduce((s, c) => s + (c.saldo || c.importo || 0), 0);
+    const altroSource = st?.liquidita?.altro || [];
+    const altro = (altroSource || []).reduce((s, a) => s + (a.valore || a.importo || 0), 0);
     const totale = conti + carte + altro;
     return { date, conti, carte, altro, totale };
   };
@@ -215,7 +220,7 @@ const Dashboard = (props) => {
   const chartDataLiquidita = React.useMemo(() => {
     const points = (history || []).map(h => buildLiquiditaFromSnapshot(h));
 
-    const currConti = (state?.liquidita?.conti || []).reduce((s, c) => s + (c.saldo || c.importo || 0), 0);
+    const currConti = ((state?.liquidita?.conti || state?.patrimonio?.contiDeposito) || []).reduce((s, c) => s + (c.saldo || c.importo || 0), 0);
     const currCarte = (state?.liquidita?.carte || []).reduce((s, c) => s + (c.saldo || c.importo || 0), 0);
     const currAltro = (state?.liquidita?.altro || []).reduce((s, a) => s + (a.valore || a.importo || 0), 0);
     const currTot = currConti + currCarte + currAltro;
@@ -509,6 +514,8 @@ const Dashboard = (props) => {
             {visibleLiquidita.conti && <Area type="monotone" dataKey="conti" stroke="#27ae60" fill="rgba(39,174,96,0.08)" stackId="liquidita" name="Conti" />}
             {visibleLiquidita.carte && <Area type="monotone" dataKey="carte" stroke="#2980b9" fill="rgba(41,128,185,0.06)" stackId="liquidita" name="Carte" />}
             {visibleLiquidita.altro && <Area type="monotone" dataKey="altro" stroke="#8e44ad" fill="rgba(142,68,173,0.06)" stackId="liquidita" name="Altro" />}
+            {/* overlay total line to display overall liquidity trend */}
+            <Line type="monotone" dataKey="totale" stroke="#06d2fa" strokeWidth={2} dot={false} name="Totale liquidità" />
           </AreaChart>
         </ResponsiveContainer>
         </div>
