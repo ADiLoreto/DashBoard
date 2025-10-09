@@ -97,10 +97,10 @@ const Stipendio = () => {
             }}
             footer={(
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Time / h</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input type="number" value={editHours} onChange={e => setEditHours(Number(e.target.value))} style={{ width: 96, padding: '6px 8px', borderRadius: 8, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', fontFamily: 'Roboto Mono, monospace', fontSize: 16 }} />
-                </div>
+                <div style={{ fontSize: 16, color: 'var(--text-light)', fontFamily: 'Montserrat, sans-serif', fontWeight: 700 }}>Time / h</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input type="number" value={editHours} onChange={e => setEditHours(Number(e.target.value))} style={{ width: 96, height: 44, lineHeight: '44px', padding: '0 13px', boxSizing: 'border-box', borderRadius: 18, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', background: 'var(--bg-light)', fontFamily: 'Roboto Mono, monospace', fontSize: 20, WebkitAppearance: 'none', MozAppearance: 'textfield' }} />
+                  </div>
               </div>
             )}
           />
@@ -119,8 +119,8 @@ const Stipendio = () => {
               onDelete={() => handleDeleteEntry(entry.id)}
               footer={(
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Time / h</div>
-                  <input type="number" value={entry.hours || ''} onChange={e => handleUpdateEntry({ ...entry, hours: Number(e.target.value || 0) })} style={{ width: 96, padding: '6px 8px', borderRadius: 8, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', fontFamily: 'Roboto Mono, monospace', fontSize: 14 }} />
+            <div style={{ fontSize: 16, color: 'var(--text-light)', fontFamily: 'Montserrat, sans-serif', fontWeight: 700 }}>Time / h</div>
+                  <input type="number" value={entry.hours || ''} onChange={e => handleUpdateEntry({ ...entry, hours: Number(e.target.value || 0) })} style={{ width: 96, height: 40, lineHeight: '40px', padding: '0 13px', boxSizing: 'border-box', borderRadius: 18, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', background: 'var(--bg-light)', fontFamily: 'Roboto Mono, monospace', fontSize: 20, WebkitAppearance: 'none', MozAppearance: 'textfield' }} />
                 </div>
               )}
             />
