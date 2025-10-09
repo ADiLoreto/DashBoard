@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { AuthContext } from '../../context/AuthContext';
 
 const keyFor = (username) => `user_settings_${username}`;
@@ -21,10 +22,45 @@ const UserMenu = () => {
   const [open, setOpen] = useState(false);
   const [settings, setSettings] = useState({ currency: 'EUR' });
   const [showPass, setShowPass] = useState(false);
+  const btnRef = useRef(null);
+  const [pos, setPos] = useState({ left: 0, top: 0, visibility: 'hidden' });
 
   useEffect(() => {
     if (username) setSettings(s => ({ currency: 'EUR', ...loadSettings(username) }));
   }, [username]);
+
+  // position portal when opened and handle outside click
+  useEffect(() => {
+    if (!open || !btnRef.current) {
+      setPos(p => ({ ...p, visibility: 'hidden' }));
+      return;
+    }
+
+    const update = () => {
+      const rect = btnRef.current.getBoundingClientRect();
+      const left = rect.left + window.scrollX; // page coords
+      const top = rect.bottom + window.scrollY;
+      setPos({ left, top, visibility: 'visible' });
+    };
+
+    update();
+
+    const onDocClick = (e) => {
+      const portal = document.querySelector('[data-usermenu-portal]');
+      if (btnRef.current && btnRef.current.contains(e.target)) return;
+      if (portal && portal.contains(e.target)) return;
+      setOpen(false);
+    };
+
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    document.addEventListener('mousedown', onDocClick);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+      document.removeEventListener('mousedown', onDocClick);
+    };
+  }, [open]);
 
   const initial = displayName ? displayName.trim().charAt(0).toUpperCase() : (username ? username.charAt(0).toUpperCase() : '?');
 
@@ -36,8 +72,9 @@ const UserMenu = () => {
   };
 
   return (
-    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
       <button
+        ref={btnRef}
         title={displayName || username}
         onClick={() => setOpen(v => !v)}
         style={{
@@ -57,8 +94,8 @@ const UserMenu = () => {
         {initial}
       </button>
 
-      {open && (
-        <div style={{ position: 'absolute', left: 60, top: 0, width: 300, background: 'var(--bg-dark)', border: '1px solid rgba(255,255,255,0.06)', padding: 12, borderRadius: 8, zIndex: 40 }}>
+      {open && btnRef.current && createPortal(
+        <div data-usermenu-portal style={{ position: 'absolute', left: pos.left, top: pos.top, width: 320, background: 'var(--bg-dark)', border: '1px solid rgba(255,255,255,0.06)', padding: 12, borderRadius: 8, zIndex: 9999 }}>
           <div style={{ color: 'var(--bg-light)', fontWeight: 700, marginBottom: 8 }}>{displayName}</div>
           <div style={{ marginBottom: 8 }}>
             <label style={{ color: 'var(--text-muted)', fontSize: 12 }}>Username</label>
@@ -90,8 +127,7 @@ const UserMenu = () => {
           <div style={{ borderTop: '1px dashed rgba(255,255,255,0.03)', marginTop: 10, paddingTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <button onClick={() => { logout(); setOpen(false); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>Logout</button>
           </div>
-        </div>
-      )}
+        </div>, document.body)}
     </div>
   );
 };
