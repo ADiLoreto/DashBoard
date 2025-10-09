@@ -160,6 +160,11 @@ const Dashboard = (props) => {
     ((state?.uscite?.fisse || []).reduce ? state.uscite.fisse.reduce((s, u) => s + (u.importo || 0), 0) : 0) +
     ((state?.uscite?.variabili || []).reduce ? state.uscite.variabili.reduce((s, u) => s + (u.importo || 0), 0) : 0)
   );
+  // progetto sums: separate entrate (isCosto=false) and uscite (isCosto=true)
+  const progettiList = state.progettiExtra || [];
+  const currProgettiEntrate = progettiList.reduce((s, p) => s + (p && !p.isCosto ? (p.valore !== undefined ? p.valore : (p.importo || 0)) : 0), 0);
+  const currProgettiUscite = progettiList.reduce((s, p) => s + (p && p.isCosto ? (p.valore !== undefined ? p.valore : (p.importo || 0)) : 0), 0);
+
   const percUscite = currEntrate ? (currUscite / currEntrate) * 100 : 0;
   const percRemain = Math.max(0, 100 - percUscite);
 
@@ -210,12 +215,24 @@ const Dashboard = (props) => {
               <Tooltip formatter={(val) => formatCurrency(val, currency)} />
             </PieChart>
           </div>
-          {/* right donut - standalone (decorative) */}
-          <div style={{ position: 'absolute', right: 230, top: 320, width: 280, height: 280, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', boxShadow: '0 8px 24px rgba(0,0,0,0.35)' }}>
+          {/* right donut - linked to Progetti Extra (Entrate vs Uscite) */}
+          <div style={{ position: 'absolute', right: 230, top: 320, width: 280, height: 280, pointerEvents: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', boxShadow: '0 8px 24px rgba(0,0,0,0.35)', cursor: 'default' }}>
             <PieChart width={280} height={280}>
-              <Pie data={donutData} dataKey="value" cx={140} cy={140} innerRadius={72} outerRadius={128} paddingAngle={2}>
-                {donutData.map((entry, idx) => <Cell key={idx} fill={donutColors[idx % donutColors.length]} />)}
+              <Pie
+                data={[{ name: 'Entrate Progetti', value: currProgettiEntrate }, { name: 'Uscite Progetti', value: currProgettiUscite }]}
+                dataKey="value"
+                cx={140}
+                cy={140}
+                innerRadius={72}
+                outerRadius={128}
+                paddingAngle={2}
+                startAngle={90}
+                endAngle={-270}
+              >
+                <Cell key="entrateProj" fill="#16a085" />
+                <Cell key="usciteProj" fill="#ff6b6b" />
               </Pie>
+              <Tooltip formatter={(val) => formatCurrency(val, currency)} />
             </PieChart>
           </div>
         </>
