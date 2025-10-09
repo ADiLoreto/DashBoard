@@ -38,6 +38,8 @@ const Dashboard = (props) => {
     crypto: true,
   oro: true,
   });
+  // visibility state for the Liquidità chart series
+  const [visibleLiquidita, setVisibleLiquidita] = useState({ conti: true, carte: true, altro: true });
 
   // placeholder donut data (visual only)
   const donutData = [{ name: 'A', value: 40 }, { name: 'B', value: 60 }];
@@ -133,6 +135,17 @@ const Dashboard = (props) => {
   return { date, tfr, conti, buoni, azioni, etf, crypto, oro, patrimonio };
   };
 
+  // build liquidita breakdown from snapshot (matches structure used in Liquidita section)
+  const buildLiquiditaFromSnapshot = (snap) => {
+    const st = snap && snap.state ? snap.state : snap || {};
+    const date = snap?.date || st?.date || '';
+    const conti = (st?.liquidita?.conti || []).reduce((s, c) => s + (c.saldo || c.importo || 0), 0);
+    const carte = (st?.liquidita?.carte || []).reduce((s, c) => s + (c.saldo || c.importo || 0), 0);
+    const altro = (st?.liquidita?.altro || []).reduce((s, a) => s + (a.valore || a.importo || 0), 0);
+    const totale = conti + carte + altro;
+    return { date, conti, carte, altro, totale };
+  };
+
   const chartData = React.useMemo(() => {
     const points = (history || []).map(h => buildTotalsFromSnapshot(h));
 
@@ -188,6 +201,26 @@ const Dashboard = (props) => {
   const currPatrimonio = currTfr + currConti + currBuoni + currAzioni + currEtf + currCrypto + currOro;
 
   points.push({ date: saveDate, tfr: currTfr, conti: currConti, buoni: currBuoni, azioni: currAzioni, etf: currEtf, crypto: currCrypto, oro: currOro, patrimonio: currPatrimonio });
+    points.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    const filtered = points.filter(p => {
+      const d = p.date || '';
+      if (dateRange.start && d < dateRange.start) return false;
+      if (dateRange.end && d > dateRange.end) return false;
+      return true;
+    });
+    return filtered.map(p => ({ ...p, date: p.date }));
+  }, [history, state, dateRange, saveDate]);
+
+  // chart data for Liquidità (mirrors Patrimonio chart logic)
+  const chartDataLiquidita = React.useMemo(() => {
+    const points = (history || []).map(h => buildLiquiditaFromSnapshot(h));
+
+    const currConti = (state?.liquidita?.conti || []).reduce((s, c) => s + (c.saldo || c.importo || 0), 0);
+    const currCarte = (state?.liquidita?.carte || []).reduce((s, c) => s + (c.saldo || c.importo || 0), 0);
+    const currAltro = (state?.liquidita?.altro || []).reduce((s, a) => s + (a.valore || a.importo || 0), 0);
+    const currTot = currConti + currCarte + currAltro;
+
+    points.push({ date: saveDate, conti: currConti, carte: currCarte, altro: currAltro, totale: currTot });
     points.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     const filtered = points.filter(p => {
       const d = p.date || '';
@@ -450,6 +483,41 @@ const Dashboard = (props) => {
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setVisibleSeries(prev => ({ ...prev, [s.key]: !prev[s.key] })); } }}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: on ? 'var(--bg-light)' : 'var(--text-muted)', opacity: on ? 1 : 0.5 }}
               >
+                <span style={{ width: 12, height: 12, background: s.color, borderRadius: 4, display: 'inline-block', opacity: on ? 1 : 0.35, boxShadow: on ? '0 0 6px rgba(0,0,0,0.12)' : 'none' }} />
+                <span style={{ fontSize: 13 }}>{s.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* Liquidità chart (same layout/functionality as Patrimonio) */}
+  {activeSection === null && chartDataLiquidita && chartDataLiquidita.length > 0 && (
+    <div style={{ width: '100%', maxWidth: 1100, margin: '12px auto 24px', padding: 12, background: 'var(--bg-medium)', borderRadius: 12 }}>
+      <h3 style={{ color: 'var(--bg-light)', margin: '6px 0 12px' }}>Liquidità (breakdown)</h3>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+        <div style={{ flex: 1, minWidth: 0, height: 220 }}>
+        <ResponsiveContainer>
+          <AreaChart data={chartDataLiquidita} margin={{ top: 8, right: 24, left: 64, bottom: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+            <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)' }} />
+            <YAxis width={80} tickFormatter={v => formatCurrency(v, currency)} tick={{ fill: 'var(--text-muted)' }} />
+            <Tooltip formatter={(val) => formatCurrency(val, currency)} />
+            <Legend />
+            {visibleLiquidita.conti && <Area type="monotone" dataKey="conti" stroke="#27ae60" fill="rgba(39,174,96,0.08)" stackId="liquidita" name="Conti" />}
+            {visibleLiquidita.carte && <Area type="monotone" dataKey="carte" stroke="#2980b9" fill="rgba(41,128,185,0.06)" stackId="liquidita" name="Carte" />}
+            {visibleLiquidita.altro && <Area type="monotone" dataKey="altro" stroke="#8e44ad" fill="rgba(142,68,173,0.06)" stackId="liquidita" name="Altro" />}
+          </AreaChart>
+        </ResponsiveContainer>
+        </div>
+        <div style={{ width: 220, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ color: 'var(--bg-light)', fontWeight: 700 }}>Mostra serie</div>
+          {[{ key: 'conti', label: 'Conti', color: '#27ae60' }, { key: 'carte', label: 'Carte', color: '#2980b9' }, { key: 'altro', label: 'Altro', color: '#8e44ad' }].map(s => {
+            const on = !!visibleLiquidita[s.key];
+            return (
+              <div key={s.key} role="button" tabIndex={0} onClick={() => setVisibleLiquidita(prev => ({ ...prev, [s.key]: !prev[s.key] }))} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setVisibleLiquidita(prev => ({ ...prev, [s.key]: !prev[s.key] })); } }} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: on ? 'var(--bg-light)' : 'var(--text-muted)', opacity: on ? 1 : 0.5 }}>
                 <span style={{ width: 12, height: 12, background: s.color, borderRadius: 4, display: 'inline-block', opacity: on ? 1 : 0.35, boxShadow: on ? '0 0 6px rgba(0,0,0,0.12)' : 'none' }} />
                 <span style={{ fontSize: 13 }}>{s.label}</span>
               </div>
