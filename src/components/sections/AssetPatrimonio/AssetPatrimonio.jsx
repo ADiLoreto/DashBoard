@@ -8,7 +8,7 @@ import { PieChart, Pie, Cell } from 'recharts';
 
 // animated inline SVG donut chart: items (array), getValue(item) -> number
 // responsive: when `responsive` is true the svg scales to its container (keeps aspect ratio)
-const DonutChart = ({ items = [], getValue, size = 64, thickness, responsive = true }) => {
+const DonutChart = ({ items = [], getValue, size = 64, thickness, responsive = true, offsetX = 0, offsetY = 0 }) => {
   const data = (items || []).map((it, i) => ({
     name: it.titolo || it.name || `item-${i}`,
     value: Number(getValue(it) || 0),
@@ -39,8 +39,8 @@ const DonutChart = ({ items = [], getValue, size = 64, thickness, responsive = t
       <Pie
         data={data}
         dataKey="value"
-        cx={outer}
-        cy={outer}
+        cx={outer + (offsetX || 0)}
+        cy={outer + (offsetY || 0)}
         innerRadius={inner}
         outerRadius={outer}
         startAngle={90}
@@ -253,7 +253,7 @@ const AssetPatrimonio = () => {
                     <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6, textAlign: 'center', fontSize: 20 }}>{formatCurrency(conti.reduce((s,c)=>s+Number(c.saldo||0),0), currency)}</div>
                   </div>
                   <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 12 }}>
-                    <DonutChart items={conti} getValue={c => Number(c.saldo || 0)} size={240} responsive={false} />
+                    <DonutChart items={conti} getValue={c => Number(c.saldo || 0)} size={240} responsive={false} offsetX={-5} />
                   </div>
                 </div>
 
@@ -300,7 +300,7 @@ const AssetPatrimonio = () => {
                     <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6, textAlign: 'center', fontSize: 20 }}>{formatCurrency(buoni.reduce((s,b)=>s+getValue(b),0), currency)}</div>
                   </div>
                   <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 12 }}>
-                    <DonutChart items={buoni} getValue={getValue} size={240} responsive={false} />
+                    <DonutChart items={buoni} getValue={getValue} size={240} responsive={false} offsetX={-5} />
                   </div>
                 </div>
                 <div style={{ marginTop: 12, display: open ? 'flex' : 'none', flexDirection: 'column', gap: 12, overflowY: 'auto', paddingBottom: 8 }}>
@@ -345,7 +345,7 @@ const AssetPatrimonio = () => {
                     <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6, textAlign: 'center', fontSize: 20 }}>{formatCurrency(azioni.reduce((s,a)=>s+getValue(a),0), currency)}</div>
                   </div>
                   <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 12 }}>
-                    <DonutChart items={azioni} getValue={getValue} size={240} responsive={false} />
+                    <DonutChart items={azioni} getValue={getValue} size={240} responsive={false} offsetX={-5} />
                   </div>
                 </div>
                 <div style={{ marginTop: 12, display: open ? 'flex' : 'none', flexDirection: 'column', gap: 12, overflowY: 'auto', paddingBottom: 8 }}>
@@ -389,7 +389,7 @@ const AssetPatrimonio = () => {
                     <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6, textAlign: 'center', fontSize: 20 }}>{formatCurrency(etf.reduce((s,e)=>s+getValue(e),0), currency)}</div>
                   </div>
                   <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 12 }}>
-                    <DonutChart items={etf} getValue={getValue} size={240} responsive={false} />
+                    <DonutChart items={etf} getValue={getValue} size={240} responsive={false} offsetX={-5} />
                   </div>
                 </div>
                 <div style={{ marginTop: 12, display: open ? 'flex' : 'none', flexDirection: 'column', gap: 12, overflowY: 'auto', paddingBottom: 8 }}>
@@ -433,7 +433,7 @@ const AssetPatrimonio = () => {
                     <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6, textAlign: 'center', fontSize: 20 }}>{formatCurrency(crypto.reduce((s,c)=>s+getValue(c),0), currency)}</div>
                   </div>
                   <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 12 }}>
-                    <DonutChart items={crypto} getValue={getValue} size={240} responsive={false} />
+                    <DonutChart items={crypto} getValue={getValue} size={240} responsive={false} offsetX={-5} />
                   </div>
                 </div>
                 <div style={{ marginTop: 12, display: open ? 'flex' : 'none', flexDirection: 'column', gap: 12, overflowY: 'auto', paddingBottom: 8 }}>
@@ -477,7 +477,7 @@ const AssetPatrimonio = () => {
                     <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6, textAlign: 'center', fontSize: 20 }}>{formatCurrency(oro.reduce((s,o)=>s+getValue(o),0), currency)}</div>
                   </div>
                   <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 12 }}>
-                    <DonutChart items={oro} getValue={getValue} size={240} responsive={false} />
+                    <DonutChart items={oro} getValue={getValue} size={240} responsive={false} offsetX={-5} />
                   </div>
                 </div>
                 <div style={{ marginTop: 12, display: open ? 'flex' : 'none', flexDirection: 'column', gap: 12, overflowY: 'auto', paddingBottom: 8 }}>
