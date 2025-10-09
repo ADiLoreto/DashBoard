@@ -10,7 +10,7 @@ import ProgettiExtra from '../sections/ProgettiExtra/ProgettiExtra';
 import { useFinancialCalculations } from '../../hooks/useFinancialCalculations';
 import { FinanceContext } from '../../context/FinanceContext';
 import { formatCurrency, getUserCurrency } from '../../utils/format';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Line } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Line, PieChart, Pie, Cell } from 'recharts';
 
 const Dashboard = (props) => {
   const { activeSection, setActiveSection } = props;
@@ -38,6 +38,10 @@ const Dashboard = (props) => {
     crypto: true,
   oro: true,
   });
+
+  // placeholder donut data (visual only)
+  const donutData = [{ name: 'A', value: 40 }, { name: 'B', value: 60 }];
+  const donutColors = ['#06d2fa', '#ff6b6b'];
 
   const handleDateChange = (e) => {
     const { name, value } = e.target;
@@ -183,7 +187,23 @@ const Dashboard = (props) => {
   }, [history, state, dateRange, saveDate]);
 
   return (
-    <main style={{ flex: 1, background: 'var(--bg-dark)', minHeight: '100vh' }}>
+    <main style={{ position: 'relative', flex: 1, background: 'var(--bg-dark)', minHeight: '100vh' }}>
+      {/* left donut - standalone */}
+  <div style={{ position: 'absolute', left: 230, top: 320, width: 280, height: 280, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', boxShadow: '0 8px 24px rgba(0,0,0,0.35)' }}>
+        <PieChart width={280} height={280}>
+          <Pie data={donutData} dataKey="value" cx={140} cy={140} innerRadius={72} outerRadius={128} paddingAngle={2}>
+            {donutData.map((entry, idx) => <Cell key={idx} fill={donutColors[idx % donutColors.length]} />)}
+          </Pie>
+        </PieChart>
+      </div>
+      {/* right donut - standalone */}
+  <div style={{ position: 'absolute', right: 230, top: 320, width: 280, height: 280, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', boxShadow: '0 8px 24px rgba(0,0,0,0.35)' }}>
+        <PieChart width={280} height={280}>
+          <Pie data={donutData} dataKey="value" cx={140} cy={140} innerRadius={72} outerRadius={128} paddingAngle={2}>
+            {donutData.map((entry, idx) => <Cell key={idx} fill={donutColors[idx % donutColors.length]} />)}
+          </Pie>
+        </PieChart>
+      </div>
       <div className="topbar">
         <h1>FINANCIAL STATUS DASHBOARD</h1>
         <div className="topbar-dates">
@@ -412,7 +432,7 @@ const Dashboard = (props) => {
   )}
 
   {saveConfirm && (
-    <div style={{ width: '100%', maxWidth: 1100, margin: '12px auto', padding: 12, background: 'var(--accent-cyan)', color: 'var(--bg-dark)', borderRadius: 12, textAlign: 'center', fontWeight: 700 }}>
+    <div style={{ width: '100%', maxWidth: 1100, margin: '12px auto', padding: 12, background: 'var(--accent-cyan)', color: 'var(--bg-dark)', borderRadius: 12, textAlign: 'center', fontWeight: '700' }}>
       {saveConfirm}
     </div>
   )}
