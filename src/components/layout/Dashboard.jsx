@@ -75,13 +75,20 @@ const Dashboard = (props) => {
   const currency = getUserCurrency(username);
   const totaleProgetti = (state.progettiExtra || []).reduce((s, p) => s + (p.valore || 0), 0);
 
-  const totals = {
-    'Entrate Attuali': { raw: totaleEntrate, label: formatCurrency(totaleEntrate, currency) },
-    'Asset Patrimonio': { raw: totalePatrimonio, label: formatCurrency(totalePatrimonio, currency) },
-    'Liquidità': { raw: totaleLiquidita, label: formatCurrency(totaleLiquidita, currency) },
-    'Uscite': { raw: 1200, label: formatCurrency(1200, currency) },
-    'Progetti Extra': { raw: totaleProgetti, label: formatCurrency(totaleProgetti, currency) },
-  };
+  // compute totaleUscite from state so Dashboard tab matches Uscite section
+  const totaleUscite = (
+    (state?.uscite?.fisse || []).reduce ? state.uscite.fisse.reduce((sum, u) => sum + (u.importo || 0), 0) : 0
+  ) + (
+    (state?.uscite?.variabili || []).reduce ? state.uscite.variabili.reduce((sum, u) => sum + (u.importo || 0), 0) : 0
+  );
+
+   const totals = {
+     'Entrate Attuali': { raw: totaleEntrate, label: formatCurrency(totaleEntrate, currency) },
+     'Asset Patrimonio': { raw: totalePatrimonio, label: formatCurrency(totalePatrimonio, currency) },
+     'Liquidità': { raw: totaleLiquidita, label: formatCurrency(totaleLiquidita, currency) },
+    'Uscite': { raw: totaleUscite, label: formatCurrency(totaleUscite, currency) },
+     'Progetti Extra': { raw: totaleProgetti, label: formatCurrency(totaleProgetti, currency) },
+   };
 
   // Icone esempio (puoi usare emoji o icone da una libreria)
   const icons = {
