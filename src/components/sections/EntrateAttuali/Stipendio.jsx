@@ -4,7 +4,8 @@ import { FinanceContext } from '../../../context/FinanceContext';
 import { z } from 'zod';
 
 const stipendioSchema = z.object({
-  netto: z.number().min(0)
+  netto: z.number().min(0),
+  hours: z.number().min(0).optional()
 });
 
 const Stipendio = () => {
@@ -24,8 +25,9 @@ const Stipendio = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false); // for stipendio
   const [showEntryModal, setShowEntryModal] = useState(false); // for editing an entry
-  const [newEntry, setNewEntry] = useState({ title: '', value: '' });
+  const [newEntry, setNewEntry] = useState({ title: '', value: '', hours: '' });
   const [editNetto, setEditNetto] = useState((state.entrate.stipendio.netto && state.entrate.stipendio.netto > 0) ? state.entrate.stipendio.netto : '');
+  const [editHours, setEditHours] = useState((state.entrate.stipendio.hours !== undefined) ? state.entrate.stipendio.hours : 26);
   const [editingEntry, setEditingEntry] = useState(null);
 
   const handleTitleEdit = () => setIsEditingTitle(true);
@@ -36,7 +38,7 @@ const Stipendio = () => {
     if (newEntry.title && newEntry.value) {
       // save to context as altra entrata
   const id = Math.random().toString(36).slice(2, 9);
-  dispatch({ type: 'ADD_ENTRATA', payload: { id, titolo: newEntry.title, importo: Number(newEntry.value), date: new Date().toISOString().slice(0,10) } });
+  dispatch({ type: 'ADD_ENTRATA', payload: { id, titolo: newEntry.title, importo: Number(newEntry.value), hours: Number(newEntry.hours || 0), date: new Date().toISOString().slice(0,10) } });
       setNewEntry({ title: '', value: '' });
       setShowAddModal(false);
     }
@@ -44,6 +46,7 @@ const Stipendio = () => {
 
   const openEditModal = () => {
   setEditNetto((state.entrate.stipendio.netto && state.entrate.stipendio.netto > 0) ? state.entrate.stipendio.netto : '');
+    setEditHours((state.entrate.stipendio.hours !== undefined) ? state.entrate.stipendio.hours : 26);
     setShowEditModal(true);
   };
 
@@ -82,31 +85,42 @@ const Stipendio = () => {
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 32 }}>
-        <BigTab
-          title={title}
-          value={state.entrate.stipendio.netto}
-          titleStyle={{ fontSize: 22 }}
-          valueStyle={{ fontSize: 22, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
-          allowTitleEdit={false}
-          onUpdate={update => {
-            if (update.value !== undefined) handleSave({ netto: Number(update.value) });
-          }}
-        />
-        {(state.entrate.altreEntrate || []).map((entry) => (
-            <BigTab
-            key={entry.id}
-            title={entry.titolo || entry.title}
-            value={entry.importo !== undefined ? entry.importo : entry.value}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          <BigTab
+            title={title}
+            value={state.entrate.stipendio.netto}
             titleStyle={{ fontSize: 22 }}
-              valueStyle={{ fontSize: 22, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
+            valueStyle={{ fontSize: 22, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
+            allowTitleEdit={false}
             onUpdate={update => {
-              if (update.title !== undefined) handleUpdateEntry({ ...entry, titolo: update.title });
-              if (update.value !== undefined) handleUpdateEntry({ ...entry, importo: Number(update.value) });
+              if (update.value !== undefined) handleSave({ netto: Number(update.value), hours: editHours });
             }}
-            onDelete={() => handleDeleteEntry(entry.id)}
           />
+          <div style={{ width: 200, textAlign: 'center', color: 'var(--text-muted)', marginTop: 6 }}>
+            <label style={{ fontSize: 12 }}>Time / h</label>
+            <input type="number" value={editHours} onChange={e => setEditHours(Number(e.target.value))} style={{ display: 'block', width: '100%', marginTop: 6, padding: 6, borderRadius: 6, border: '1px solid var(--bg-medium)', textAlign: 'center' }} />
+          </div>
+        </div>
+        {(state.entrate.altreEntrate || []).map((entry) => (
+          <div key={entry.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <BigTab
+              title={entry.titolo || entry.title}
+              value={entry.importo !== undefined ? entry.importo : entry.value}
+              titleStyle={{ fontSize: 22 }}
+              valueStyle={{ fontSize: 22, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
+              onUpdate={update => {
+                if (update.title !== undefined) handleUpdateEntry({ ...entry, titolo: update.title });
+                if (update.value !== undefined) handleUpdateEntry({ ...entry, importo: Number(update.value) });
+              }}
+              onDelete={() => handleDeleteEntry(entry.id)}
+            />
+            <div style={{ width: 120, textAlign: 'center', color: 'var(--text-muted)', marginTop: 6 }}>
+              <label style={{ fontSize: 12 }}>Time / h</label>
+              <input type="number" value={entry.hours || ''} onChange={e => handleUpdateEntry({ ...entry, hours: Number(e.target.value || 0) })} style={{ display: 'block', width: '100%', marginTop: 6, padding: 6, borderRadius: 6, border: '1px solid var(--bg-medium)', textAlign: 'center' }} />
+            </div>
+          </div>
         ))}
-        <div
+  <div
           className="big-tab add-tab"
           style={{
             background: 'var(--bg-light)',
@@ -132,7 +146,7 @@ const Stipendio = () => {
       </div>
 
       {showAddModal && (
-        <div style={{
+  <div style={{
           position: 'fixed',
           top: 0,
           left: 0,
@@ -160,6 +174,13 @@ const Stipendio = () => {
               onChange={e => setNewEntry({ ...newEntry, value: e.target.value })}
               style={{ width: '100%', marginBottom: 12, padding: '12px', fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }}
             />
+            <input
+              type="number"
+              placeholder="Time / h"
+              value={newEntry.hours}
+              onChange={e => setNewEntry({ ...newEntry, hours: e.target.value })}
+              style={{ width: '100%', marginBottom: 12, padding: '12px', fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }}
+            />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
               <button onClick={() => setShowAddModal(false)} style={{ background: 'var(--bg-medium)', color: 'var(--bg-light)', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 'bold', fontSize: 16, cursor: 'pointer' }}>Annulla</button>
               <button onClick={handleAddEntry} style={{ background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 'bold', fontSize: 16, cursor: 'pointer' }}>Aggiungi</button>
@@ -168,7 +189,7 @@ const Stipendio = () => {
         </div>
       )}
 
-      {showEditModal && (
+  {showEditModal && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -186,10 +207,12 @@ const Stipendio = () => {
             <div style={{ display: 'grid', gap: 12, marginTop: 8 }}>
               <label style={{ fontWeight: 700 }}>Netto (€)</label>
               <input type="number" value={editNetto} onChange={e => setEditNetto(e.target.value)} style={{ padding: 12, fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }} />
+              <label style={{ fontWeight: 700 }}>Time / h</label>
+              <input type="number" value={editHours} onChange={e => setEditHours(e.target.value)} style={{ padding: 12, fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 16 }}>
               <button onClick={() => setShowEditModal(false)} style={{ background: 'var(--bg-medium)', color: 'var(--bg-light)', border: 'none', borderRadius: 8, padding: '10px 20px' }}>Annulla</button>
-              <button onClick={() => { const n = Number(editNetto || 0); handleSave({ netto: n }); setShowEditModal(false); }} style={{ background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', borderRadius: 8, padding: '10px 20px' }}>Salva</button>
+              <button onClick={() => { const n = Number(editNetto || 0); const h = Number(editHours || 0); handleSave({ netto: n, hours: h }); setShowEditModal(false); }} style={{ background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', borderRadius: 8, padding: '10px 20px' }}>Salva</button>
             </div>
           </div>
         </div>
