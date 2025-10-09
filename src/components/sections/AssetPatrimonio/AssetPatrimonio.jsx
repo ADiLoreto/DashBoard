@@ -4,60 +4,58 @@ import { formatCurrency, getUserCurrency } from '../../../utils/format';
 import { AuthContext } from '../../../context/AuthContext';
 import { FinanceContext } from '../../../context/FinanceContext';
 import BigTab from '../../ui/BigTab';
+import { PieChart, Pie, Cell } from 'recharts';
 
-// small inline SVG donut chart: items (array), getValue(item) -> number
-// now responsive: when `responsive` is true the svg scales to its container (keeps aspect ratio)
+// animated inline SVG donut chart: items (array), getValue(item) -> number
+// responsive: when `responsive` is true the svg scales to its container (keeps aspect ratio)
 const DonutChart = ({ items = [], getValue, size = 64, thickness, responsive = true }) => {
-  const values = items.map((it) => Number(getValue(it) || 0));
-  const total = values.reduce((s, v) => s + v, 0);
+  const data = (items || []).map((it, i) => ({
+    name: it.titolo || it.name || `item-${i}`,
+    value: Number(getValue(it) || 0),
+  }));
 
-  // default thickness scales with size if not provided
+  const total = data.reduce((s, d) => s + (d.value || 0), 0);
   const strokeWidth = typeof thickness === 'number' ? thickness : Math.max(6, Math.round(size * 0.18));
-  const r = (size - strokeWidth) / 2;
-  const c = 2 * Math.PI * r;
+  const outer = Math.round(size / 2);
+  const inner = Math.max(0, outer - strokeWidth);
 
-  const colorFor = (i) => {
-    const palette = ['var(--accent-cyan)', 'var(--accent-blue)', 'var(--text-muted)', 'var(--bg-light)', 'var(--bg-darker)'];
-    return palette[i % palette.length];
-  };
+  const palette = ['var(--accent-cyan)', 'var(--accent-blue)', 'var(--text-muted)', 'var(--bg-light)', 'var(--bg-darker)'];
+
+  // count non-zero slices to decide padding
+  const nonZeroCount = data.filter(d => (d.value || 0) > 0).length;
+  // use a small padding for multi-slice donuts to minimize visible gaps (anti-aliasing still possible)
+  const paddingAngle = nonZeroCount <= 1 ? 0 : 0.6;
 
   if (!total) {
-    // empty ring
     return (
       <svg viewBox={`0 0 ${size} ${size}`} style={responsive ? { width: '100%', height: 'auto' } : { width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
+        <circle cx={size/2} cy={size/2} r={inner} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
       </svg>
     );
   }
 
-  let cumulative = 0;
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} style={responsive ? { width: '100%', height: 'auto' } : { width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-      {values.map((v, i) => {
-        const len = (v / total) * c;
-        const dashArray = `${len} ${c - len}`;
-        const dashOffset = c - cumulative;
-        const stroke = colorFor(i, items[i]?.id);
-        cumulative += len;
-        return (
-          <circle
-            key={i}
-            cx={size/2}
-            cy={size/2}
-            r={r}
-            fill="none"
-            stroke={stroke}
-            strokeWidth={strokeWidth}
-            strokeDasharray={dashArray}
-            strokeDashoffset={dashOffset}
-            strokeLinecap="butt"
-            transform={`rotate(-90 ${size/2} ${size/2})`}
-          />
-        );
-      })}
-      {/* center hole */}
-      <circle cx={size/2} cy={size/2} r={r - strokeWidth/2} fill="var(--bg-medium)" />
-    </svg>
+    <PieChart width={size} height={size}>
+      <Pie
+        data={data}
+        dataKey="value"
+        cx={outer}
+        cy={outer}
+        innerRadius={inner}
+        outerRadius={outer}
+        startAngle={90}
+        endAngle={-270}
+        paddingAngle={paddingAngle}
+        isAnimationActive={true}
+        animationDuration={1200}
+        animationEasing="ease"
+        stroke="none"
+      >
+        {data.map((d, i) => (
+          <Cell key={i} fill={palette[i % palette.length]} stroke="none" />
+        ))}
+      </Pie>
+    </PieChart>
   );
 };
 

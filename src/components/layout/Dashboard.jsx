@@ -240,48 +240,70 @@ const Dashboard = (props) => {
     <main style={{ position: 'relative', flex: 1, background: 'var(--bg-dark)', minHeight: '100vh' }}>
       {activeSection === null && (
         <>
-          {/* left donut - linked to Entrate/Uscite */}
-          <div aria-hidden style={{ position: 'absolute', left: 230, top: 320, width: 280, height: 280, pointerEvents: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', boxShadow: '0 8px 24px rgba(0,0,0,0.35)', cursor: 'default' }}>
-            <PieChart width={280} height={280}>
-              <Pie
-                data={[{ name: 'Entrate', value: currEntrate }, { name: 'Uscite', value: currUscite }]}
-                dataKey="value"
-                cx={140}
-                cy={140}
-                innerRadius={72}
-                outerRadius={128}
-                paddingAngle={2}
-                startAngle={90}
-                endAngle={-270}
-              >
-                <Cell key="entrate" fill="#16a085" />
-                <Cell key="uscite" fill="#ff6b6b" />
-              </Pie>
-              <Tooltip formatter={(val) => formatCurrency(val, currency)} />
-            </PieChart>
-          </div>
-          {/* right donut - linked to Progetti Extra (Entrate vs Uscite) */}
-          <div style={{ position: 'absolute', right: 230, top: 320, width: 280, height: 280, pointerEvents: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', boxShadow: '0 8px 24px rgba(0,0,0,0.35)', cursor: 'default' }}>
-            <PieChart width={280} height={280}>
-              <Pie
-                data={[{ name: 'Entrate Progetti', value: currProgettiEntrate }, { name: 'Uscite Progetti', value: currProgettiUscite }]}
-                dataKey="value"
-                cx={140}
-                cy={140}
-                innerRadius={72}
-                outerRadius={128}
-                paddingAngle={2}
-                startAngle={90}
-                endAngle={-270}
-              >
-                <Cell key="entrateProj" fill="#16a085" />
-                <Cell key="usciteProj" fill="#ff6b6b" />
-              </Pie>
-              <Tooltip formatter={(val) => formatCurrency(val, currency)} />
-            </PieChart>
-          </div>
-        </>
-      )}
+          {(() => {
+            // prepare donut data and compute small padding to minimize visible gray gaps
+            const leftDonutData = [{ name: 'Entrate', value: currEntrate }, { name: 'Uscite', value: currUscite }];
+            const leftNonZero = leftDonutData.filter(d => (d.value || 0) > 0).length;
+            const leftPaddingAngle = leftNonZero <= 1 ? 0 : 0.6;
+
+            const rightDonutData = [{ name: 'Entrate Progetti', value: currProgettiEntrate }, { name: 'Uscite Progetti', value: currProgettiUscite }];
+            const rightNonZero = rightDonutData.filter(d => (d.value || 0) > 0).length;
+            const rightPaddingAngle = rightNonZero <= 1 ? 0 : 0.6;
+
+            return (
+              <>
+                <div aria-hidden style={{ position: 'absolute', left: 230, top: 320, width: 280, height: 280, pointerEvents: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', boxShadow: '0 8px 24px rgba(0,0,0,0.35)', cursor: 'default' }}>
+                  <PieChart width={280} height={280}>
+                    <Pie
+                      data={leftDonutData}
+                      dataKey="value"
+                      cx={140}
+                      cy={140}
+                      innerRadius={72}
+                      outerRadius={128}
+                      paddingAngle={leftPaddingAngle}
+                      startAngle={90}
+                      endAngle={-270}
+                      isAnimationActive={true}
+                      animationDuration={1200}
+                      animationEasing="ease"
+                      stroke="none"
+                    >
+                      <Cell key="entrate" fill="#16a085" stroke="none" />
+                      <Cell key="uscite" fill="#ff6b6b" stroke="none" />
+                    </Pie>
+                    <Tooltip formatter={(val) => formatCurrency(val, currency)} />
+                  </PieChart>
+                </div>
+
+                <div style={{ position: 'absolute', right: 230, top: 320, width: 280, height: 280, pointerEvents: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', boxShadow: '0 8px 24px rgba(0,0,0,0.35)', cursor: 'default' }}>
+                  <PieChart width={280} height={280}>
+                    <Pie
+                      data={rightDonutData}
+                      dataKey="value"
+                      cx={140}
+                      cy={140}
+                      innerRadius={72}
+                      outerRadius={128}
+                      paddingAngle={rightPaddingAngle}
+                      startAngle={90}
+                      endAngle={-270}
+                      isAnimationActive={true}
+                      animationDuration={1200}
+                      animationEasing="ease"
+                      stroke="none"
+                    >
+                      <Cell key="entrateProj" fill="#16a085" stroke="none" />
+                      <Cell key="usciteProj" fill="#ff6b6b" stroke="none" />
+                    </Pie>
+                    <Tooltip formatter={(val) => formatCurrency(val, currency)} />
+                  </PieChart>
+                </div>
+              </>
+            );
+          })()}
+         </>
+       )}
       <div className="topbar">
         <h1>FINANCIAL STATUS DASHBOARD</h1>
         <div className="topbar-dates">
