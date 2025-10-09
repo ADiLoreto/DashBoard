@@ -95,11 +95,15 @@ const Stipendio = () => {
             onUpdate={update => {
               if (update.value !== undefined) handleSave({ netto: Number(update.value), hours: editHours });
             }}
+            footer={(
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Time / h</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input type="number" value={editHours} onChange={e => setEditHours(Number(e.target.value))} style={{ width: 96, padding: '6px 8px', borderRadius: 8, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', fontFamily: 'Roboto Mono, monospace', fontSize: 16 }} />
+                </div>
+              </div>
+            )}
           />
-          <div style={{ width: 200, textAlign: 'center', color: 'var(--text-muted)', marginTop: 6 }}>
-            <label style={{ fontSize: 12 }}>Time / h</label>
-            <input type="number" value={editHours} onChange={e => setEditHours(Number(e.target.value))} style={{ display: 'block', width: '100%', marginTop: 6, padding: 6, borderRadius: 6, border: '1px solid var(--bg-medium)', textAlign: 'center' }} />
-          </div>
         </div>
         {(state.entrate.altreEntrate || []).map((entry) => (
           <div key={entry.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
@@ -113,11 +117,13 @@ const Stipendio = () => {
                 if (update.value !== undefined) handleUpdateEntry({ ...entry, importo: Number(update.value) });
               }}
               onDelete={() => handleDeleteEntry(entry.id)}
+              footer={(
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Time / h</div>
+                  <input type="number" value={entry.hours || ''} onChange={e => handleUpdateEntry({ ...entry, hours: Number(e.target.value || 0) })} style={{ width: 96, padding: '6px 8px', borderRadius: 8, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', fontFamily: 'Roboto Mono, monospace', fontSize: 14 }} />
+                </div>
+              )}
             />
-            <div style={{ width: 120, textAlign: 'center', color: 'var(--text-muted)', marginTop: 6 }}>
-              <label style={{ fontSize: 12 }}>Time / h</label>
-              <input type="number" value={entry.hours || ''} onChange={e => handleUpdateEntry({ ...entry, hours: Number(e.target.value || 0) })} style={{ display: 'block', width: '100%', marginTop: 6, padding: 6, borderRadius: 6, border: '1px solid var(--bg-medium)', textAlign: 'center' }} />
-            </div>
           </div>
         ))}
   <div

@@ -17,6 +17,7 @@ const BigTab = ({
   allowTitleEdit, // optional override
   allowValueEdit, // optional override
   subtitle
+  , footer
 }) => {
   const [editingField, setEditingField] = useState(null); // 'title' | 'value' | null
   const [draftTitle, setDraftTitle] = useState(title);
@@ -153,6 +154,13 @@ const BigTab = ({
     onClick={() => { if (canEditValue) setEditingField('value'); }}
         >
           {typeof value === 'number' && !isNaN(value) ? value : 0}
+        </div>
+      )}
+
+      {/* Footer area (e.g., embedded Time/h control) */}
+      {footer && (
+        <div style={{ marginTop: 10, textAlign: 'center', width: '100%' }}>
+          {footer}
         </div>
       )}
 
