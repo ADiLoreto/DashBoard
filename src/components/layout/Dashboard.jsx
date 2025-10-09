@@ -188,22 +188,38 @@ const Dashboard = (props) => {
 
   return (
     <main style={{ position: 'relative', flex: 1, background: 'var(--bg-dark)', minHeight: '100vh' }}>
-      {/* left donut - standalone */}
-  <div style={{ position: 'absolute', left: 230, top: 320, width: 280, height: 280, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', boxShadow: '0 8px 24px rgba(0,0,0,0.35)' }}>
-        <PieChart width={280} height={280}>
-          <Pie data={donutData} dataKey="value" cx={140} cy={140} innerRadius={72} outerRadius={128} paddingAngle={2}>
-            {donutData.map((entry, idx) => <Cell key={idx} fill={donutColors[idx % donutColors.length]} />)}
-          </Pie>
-        </PieChart>
-      </div>
-      {/* right donut - standalone */}
-  <div style={{ position: 'absolute', right: 230, top: 320, width: 280, height: 280, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', boxShadow: '0 8px 24px rgba(0,0,0,0.35)' }}>
-        <PieChart width={280} height={280}>
-          <Pie data={donutData} dataKey="value" cx={140} cy={140} innerRadius={72} outerRadius={128} paddingAngle={2}>
-            {donutData.map((entry, idx) => <Cell key={idx} fill={donutColors[idx % donutColors.length]} />)}
-          </Pie>
-        </PieChart>
-      </div>
+      {activeSection === null && (
+        <>
+          {/* left donut - linked to Entrate/Uscite */}
+          <div aria-hidden style={{ position: 'absolute', left: 230, top: 320, width: 280, height: 280, pointerEvents: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', boxShadow: '0 8px 24px rgba(0,0,0,0.35)', cursor: 'default' }}>
+            <PieChart width={280} height={280}>
+              <Pie
+                data={[{ name: 'Entrate', value: currEntrate }, { name: 'Uscite', value: currUscite }]}
+                dataKey="value"
+                cx={140}
+                cy={140}
+                innerRadius={72}
+                outerRadius={128}
+                paddingAngle={2}
+                startAngle={90}
+                endAngle={-270}
+              >
+                <Cell key="entrate" fill="#16a085" />
+                <Cell key="uscite" fill="#ff6b6b" />
+              </Pie>
+              <Tooltip formatter={(val) => formatCurrency(val, currency)} />
+            </PieChart>
+          </div>
+          {/* right donut - standalone (decorative) */}
+          <div style={{ position: 'absolute', right: 230, top: 320, width: 280, height: 280, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', boxShadow: '0 8px 24px rgba(0,0,0,0.35)' }}>
+            <PieChart width={280} height={280}>
+              <Pie data={donutData} dataKey="value" cx={140} cy={140} innerRadius={72} outerRadius={128} paddingAngle={2}>
+                {donutData.map((entry, idx) => <Cell key={idx} fill={donutColors[idx % donutColors.length]} />)}
+              </Pie>
+            </PieChart>
+          </div>
+        </>
+      )}
       <div className="topbar">
         <h1>FINANCIAL STATUS DASHBOARD</h1>
         <div className="topbar-dates">
