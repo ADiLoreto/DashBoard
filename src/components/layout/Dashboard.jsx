@@ -6,7 +6,7 @@ import Stipendio from '../sections/EntrateAttuali/Stipendio';
 import AssetPatrimonio from '../sections/AssetPatrimonio/AssetPatrimonio';
 import Uscite from '../sections/Uscite/Uscite';
 import Liquidita from '../sections/Liquidita/Liquidita';
-import ProgettiExtra from '../sections/ProgettiExtra/ProgettiExtra';
+import ProgettiExtra, { computeTotaleProgetti } from '../sections/ProgettiExtra/ProgettiExtra';
 import { useFinancialCalculations } from '../../hooks/useFinancialCalculations';
 import { FinanceContext } from '../../context/FinanceContext';
 import { formatCurrency, getUserCurrency } from '../../utils/format';
@@ -73,7 +73,7 @@ const Dashboard = (props) => {
   const { totaleEntrate, totalePatrimonio, totaleLiquidita } = useFinancialCalculations();
 
   const currency = getUserCurrency(username);
-  const totaleProgetti = (state.progettiExtra || []).reduce((s, p) => s + (p.valore || 0), 0);
+  const totaleProgetti = computeTotaleProgetti(state.progettiExtra || []);
 
   // compute totaleUscite from state so Dashboard tab matches Uscite section
   const totaleUscite = (

@@ -2,6 +2,14 @@ import React, { useContext } from 'react';
 import { FinanceContext } from '../../../context/FinanceContext';
 import EntriesGrid from '../../ui/EntriesGrid';
 
+// helper: compute net total for projects (entrate minus uscite)
+export function computeTotaleProgetti(progetti = []) {
+  return progetti.reduce((sum, p) => {
+    const v = p && (p.valore !== undefined ? Number(p.valore) : (p.importo !== undefined ? Number(p.importo) : 0));
+    return sum + (p && p.isCosto ? -v : v);
+  }, 0);
+}
+
 const ProgettiExtra = () => {
   const { state, dispatch } = useContext(FinanceContext);
   const progetti = state.progettiExtra || [];
@@ -19,7 +27,7 @@ const ProgettiExtra = () => {
     dispatch({ type: 'UPDATE_PROGETTO_EXTRA', payload: { id, isCosto: !p.isCosto } });
   };
 
-  const totale = progetti.reduce((sum, p) => sum + (p.valore !== undefined ? p.valore : (p.importo || 0)), 0);
+  const totale = computeTotaleProgetti(progetti);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
