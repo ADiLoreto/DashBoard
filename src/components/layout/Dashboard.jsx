@@ -42,8 +42,7 @@ const Dashboard = (props) => {
   const [visibleLiquidita, setVisibleLiquidita] = useState({ conti: true, carte: true, altro: true });
 
   // placeholder donut data (visual only)
-  const donutData = [{ name: 'A', value: 40 }, { name: 'B', value: 60 }];
-  const donutColors = ['#06d2fa', '#ff6b6b'];
+  // ...existing code...
 
   const handleDateChange = (e) => {
     const { name, value } = e.target;
@@ -190,6 +189,15 @@ const Dashboard = (props) => {
   const currProgettiEntrate = progettiList.reduce((s, p) => s + (p && !p.isCosto ? (p.valore !== undefined ? p.valore : (p.importo || 0)) : 0), 0);
   const currProgettiUscite = progettiList.reduce((s, p) => s + (p && p.isCosto ? (p.valore !== undefined ? p.valore : (p.importo || 0)) : 0), 0);
 
+  // Donut chart data (used in the inline responsive donuts)
+  const leftDonutData = [{ name: 'Entrate', value: currEntrate }, { name: 'Uscite', value: currUscite }];
+  const leftNonZero = leftDonutData.filter(d => (d.value || 0) > 0).length;
+  const leftPaddingAngle = leftNonZero <= 1 ? 0 : 0.6;
+
+  const rightDonutData = [{ name: 'Entrate Progetti', value: currProgettiEntrate }, { name: 'Uscite Progetti', value: currProgettiUscite }];
+  const rightNonZero = rightDonutData.filter(d => (d.value || 0) > 0).length;
+  const rightPaddingAngle = rightNonZero <= 1 ? 0 : 0.6;
+
   const percUscite = currEntrate ? (currUscite / currEntrate) * 100 : 0;
   const percRemain = Math.max(0, 100 - percUscite);
 
@@ -238,72 +246,6 @@ const Dashboard = (props) => {
 
   return (
     <main style={{ position: 'relative', flex: 1, background: 'var(--bg-dark)', minHeight: '100vh' }}>
-      {activeSection === null && (
-        <>
-          {(() => {
-            // prepare donut data and compute small padding to minimize visible gray gaps
-            const leftDonutData = [{ name: 'Entrate', value: currEntrate }, { name: 'Uscite', value: currUscite }];
-            const leftNonZero = leftDonutData.filter(d => (d.value || 0) > 0).length;
-            const leftPaddingAngle = leftNonZero <= 1 ? 0 : 0.6;
-
-            const rightDonutData = [{ name: 'Entrate Progetti', value: currProgettiEntrate }, { name: 'Uscite Progetti', value: currProgettiUscite }];
-            const rightNonZero = rightDonutData.filter(d => (d.value || 0) > 0).length;
-            const rightPaddingAngle = rightNonZero <= 1 ? 0 : 0.6;
-
-            return (
-              <>
-                <div aria-hidden style={{ position: 'absolute', left: 230, top: 320, width: 280, height: 280, pointerEvents: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', boxShadow: '0 8px 24px rgba(0,0,0,0.35)', cursor: 'default' }}>
-                  <PieChart width={280} height={280}>
-                    <Pie
-                      data={leftDonutData}
-                      dataKey="value"
-                      cx={140}
-                      cy={140}
-                      innerRadius={72}
-                      outerRadius={128}
-                      paddingAngle={leftPaddingAngle}
-                      startAngle={90}
-                      endAngle={-270}
-                      isAnimationActive={true}
-                      animationDuration={1200}
-                      animationEasing="ease"
-                      stroke="none"
-                    >
-                      <Cell key="entrate" fill="#16a085" stroke="none" />
-                      <Cell key="uscite" fill="#ff6b6b" stroke="none" />
-                    </Pie>
-                    <Tooltip formatter={(val) => formatCurrency(val, currency)} />
-                  </PieChart>
-                </div>
-
-                <div style={{ position: 'absolute', right: 230, top: 320, width: 280, height: 280, pointerEvents: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', boxShadow: '0 8px 24px rgba(0,0,0,0.35)', cursor: 'default' }}>
-                  <PieChart width={280} height={280}>
-                    <Pie
-                      data={rightDonutData}
-                      dataKey="value"
-                      cx={140}
-                      cy={140}
-                      innerRadius={72}
-                      outerRadius={128}
-                      paddingAngle={rightPaddingAngle}
-                      startAngle={90}
-                      endAngle={-270}
-                      isAnimationActive={true}
-                      animationDuration={1200}
-                      animationEasing="ease"
-                      stroke="none"
-                    >
-                      <Cell key="entrateProj" fill="#16a085" stroke="none" />
-                      <Cell key="usciteProj" fill="#ff6b6b" stroke="none" />
-                    </Pie>
-                    <Tooltip formatter={(val) => formatCurrency(val, currency)} />
-                  </PieChart>
-                </div>
-              </>
-            );
-          })()}
-         </>
-       )}
       <div className="topbar">
         <h1>FINANCIAL STATUS DASHBOARD</h1>
         <div className="topbar-dates">
@@ -429,39 +371,72 @@ const Dashboard = (props) => {
         ))}
       </div>
     )}
-  {/* --- chart on overview --- */}
+  {/* --- overview with inline responsive donuts --- */}
   {activeSection === null && chartData && chartData.length > 0 && (
-    <div style={{ width: '100%', maxWidth: 1100, margin: '12px auto 24px', padding: 12, background: 'var(--bg-medium)', borderRadius: 12 }}>
-      <h3 style={{ color: 'var(--bg-light)', margin: '6px 0 12px' }}>Entrate vs Uscite (storico)</h3>
-      <div style={{ display: 'flex', gap: 16, alignItems: 'stretch' }}>
-        <div style={{ flex: 1, minWidth: 0, height: 220 }}>
-          <ResponsiveContainer>
-            <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 64, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-              <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)' }} />
-              <YAxis width={80} tickFormatter={v => formatCurrency(v, currency)} tick={{ fill: 'var(--text-muted)' }} />
+    <div style={{ width: '100%', maxWidth: 1720, margin: '12px auto 24px' }}>
+      <div style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'center' }}>
+
+        {/* left donut */}
+        <div className="donut-card" role="presentation" aria-hidden>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={leftDonutData} dataKey="value" cx="50%" cy="50%" innerRadius="50%" outerRadius="90%" paddingAngle={leftPaddingAngle} startAngle={90} endAngle={-270} isAnimationActive animationDuration={900} stroke="none">
+                <Cell key="entrate" fill="#16a085" stroke="none" />
+                <Cell key="uscite" fill="#ff6b6b" stroke="none" />
+              </Pie>
               <Tooltip formatter={(val) => formatCurrency(val, currency)} />
-              <Legend />
-              <Area type="monotone" dataKey="entrate" stroke="#06d2fa" fill="rgba(6,210,250,0.12)" name="Entrate" />
-              <Area type="monotone" dataKey="uscite" stroke="#ff6b6b" fill="rgba(255,107,107,0.08)" name="Uscite" />
-            </AreaChart>
+            </PieChart>
           </ResponsiveContainer>
         </div>
-        <div style={{ width: 160, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
-          <div style={{ alignSelf: 'stretch', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <div style={{ width: 4, height: 120, borderRadius: 8, borderLeft: '4px solid rgba(255,255,255,0.06)', position: 'relative' }}>
-              <div style={{ position: 'absolute', left: -8, top: `${Math.min(100, Math.max(0, 100 - percRemain))}%`, transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 12, height: 12, borderRadius: 6, background: '#06d2fa', boxShadow: '0 0 6px rgba(6,210,250,0.12)' }} />
-                <div style={{ color: 'var(--bg-light)', fontWeight: 700 }}>{percRemain.toFixed(1)}%</div>
+
+        {/* center gray box that contains title + chart */}
+        <div style={{ flex: 1, minWidth: 0, padding: 8, background: 'var(--bg-medium)', borderRadius: 8 }}>
+          <h3 style={{ color: 'var(--bg-light)', margin: '6px 0 12px' }}>Entrate vs Uscite (storico)</h3>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'stretch' }}>
+            <div style={{ flex: 1, minWidth: 0, height: 220 }}>
+              <ResponsiveContainer>
+                <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 32, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                  <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)' }} />
+                  <YAxis width={80} tickFormatter={v => formatCurrency(v, currency)} tick={{ fill: 'var(--text-muted)' }} />
+                  <Tooltip formatter={(val) => formatCurrency(val, currency)} />
+                  <Legend />
+                  <Area type="monotone" dataKey="entrate" stroke="#06d2fa" fill="rgba(6,210,250,0.12)" name="Entrate" />
+                  <Area type="monotone" dataKey="uscite" stroke="#ff6b6b" fill="rgba(255,107,107,0.08)" name="Uscite" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <div style={{ width: 160, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+              <div style={{ alignSelf: 'stretch', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <div style={{ width: 4, height: 120, borderRadius: 8, borderLeft: '4px solid rgba(255,255,255,0.06)', position: 'relative' }}>
+                  <div style={{ position: 'absolute', left: -8, top: `${Math.min(100, Math.max(0, 100 - percRemain))}%`, transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 12, height: 12, borderRadius: 6, background: '#06d2fa', boxShadow: '0 0 6px rgba(6,210,250,0.12)' }} />
+                    <div style={{ color: 'var(--bg-light)', fontWeight: 700 }}>{percRemain.toFixed(1)}%</div>
+                  </div>
+                  <div style={{ position: 'absolute', left: -8, top: `${Math.min(100, Math.max(0, 100 - percUscite))}%`, transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 12, height: 12, borderRadius: 6, background: '#ff6b6b', boxShadow: '0 0 6px rgba(255,107,107,0.18)' }} />
+                    <div style={{ color: 'var(--bg-light)', fontWeight: 700 }}>{percUscite.toFixed(1)}%</div>
+                  </div>
+                </div>
               </div>
-              <div style={{ position: 'absolute', left: -8, top: `${Math.min(100, Math.max(0, 100 - percUscite))}%`, transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 12, height: 12, borderRadius: 6, background: '#ff6b6b', boxShadow: '0 0 6px rgba(255,107,107,0.18)' }} />
-                <div style={{ color: 'var(--bg-light)', fontWeight: 700 }}>{percUscite.toFixed(1)}%</div>
-              </div>
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>Uscite vs residuo</div>
             </div>
           </div>
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>Uscite vs residuo</div>
         </div>
+
+        {/* right donut */}
+        <div className="donut-card" role="presentation" aria-hidden>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={rightDonutData} dataKey="value" cx="50%" cy="50%" innerRadius="50%" outerRadius="90%" paddingAngle={rightPaddingAngle} startAngle={90} endAngle={-270} isAnimationActive animationDuration={900} stroke="none">
+                <Cell key="entrateProj" fill="#16a085" stroke="none" />
+                <Cell key="usciteProj" fill="#ff6b6b" stroke="none" />
+              </Pie>
+              <Tooltip formatter={(val) => formatCurrency(val, currency)} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
       </div>
     </div>
   )}
