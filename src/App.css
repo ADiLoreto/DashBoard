@@ -204,3 +204,59 @@ body {
   font-size: 14px;
   margin-bottom: 12px;
 }
+
+/* Donut charts row: centered and responsive so donuts move together with top tabs and charts */
+.donut-row {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 48px;
+  margin: 12px 0 20px;
+  flex-wrap: wrap; /* garantisce che le card vadano a capo */
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 24px; /* spazio extra per separare dai grafici sottostanti */
+}
+
+/* rendi le card responsive: possono ridursi ma mantengono proporzioni */
+.donut-card {
+  flex: 0 1 280px;       /* non cresce, può ridursi, base 280px */
+  box-sizing: border-box;
+  min-width: 160px;      /* limite inferiore (corrisponde a media query) */
+  max-width: 280px;
+  aspect-ratio: 1 / 1;   /* mantiene proporzione quadrata -> circolare con border-radius */
+  height: auto;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+
+/* prevenire che le donut si sovrappongano visivamente ai grafici: */
+.donut-row, .donut-card {
+  position: relative;
+  z-index: 0;
+}
+
+.chart-container {
+  position: relative; /* crea nuovo stacking context */
+  z-index: 1;         /* garantisce che i grafici appaiano sopra se c'è ancora sovrapposizione */
+  min-width: 0;       /* ulteriore protezione contro overflow nei flex */
+}
+
+/* consenti ai contenitori flessibili interni di ridursi correttamente */
+.kpi-container, .chart-container {
+  min-width: 0; /* evita overflow dei figli in flex */
+}
+
+/* media queries aggiornate (mantieni coerenti con le tue dimensioni) */
+@media (max-width: 1100px) {
+  .donut-card { flex-basis: 220px; max-width: 220px; min-width: 140px; }
+  .donut-row { gap: 28px; }
+}
+
+@media (max-width: 760px) {
+  .donut-card { flex-basis: 160px; max-width: 160px; min-width: 120px; box-shadow: none; }
+  .donut-row { gap: 16px; }
+}
