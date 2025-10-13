@@ -151,7 +151,7 @@ const Dashboard = (props) => {
   };
 
   const chartData = React.useMemo(() => {
-    const points = (history || []).map(h => buildTotalsFromSnapshot(h));
+  const points = (history || []).map(h => buildTotalsFromSnapshot(h));
 
     const currEntrate =
       (state?.entrate?.stipendio?.netto || 0) +
@@ -162,7 +162,18 @@ const Dashboard = (props) => {
   ((Array.isArray(state?.uscite?.fisse) ? state.uscite.fisse.reduce((s, u) => s + (u.importo || 0), 0) : 0) +
   (Array.isArray(state?.uscite?.variabili) ? state.uscite.variabili.reduce((s, u) => s + (u.importo || 0), 0) : 0));
 
-  points.push({ date: saveDate, entrate: currEntrate, uscite: currUscite });
+    // canonicalize saveDate to YYYY-MM-DD and avoid duplicate points for same day
+    const canonicalSaveDate = saveDate ? String(saveDate).slice(0, 10) : '';
+    if (canonicalSaveDate) {
+      const idx = points.findIndex(p => String(p?.date || '').slice(0, 10) === canonicalSaveDate);
+      if (idx !== -1) {
+        points[idx] = { ...points[idx], entrate: currEntrate, uscite: currUscite, date: canonicalSaveDate };
+      } else {
+        points.push({ date: canonicalSaveDate, entrate: currEntrate, uscite: currUscite });
+      }
+    } else {
+      points.push({ date: saveDate, entrate: currEntrate, uscite: currUscite });
+    }
     points.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     // filter by dateRange
     const filtered = points.filter(p => {
@@ -202,7 +213,7 @@ const Dashboard = (props) => {
   const percRemain = Math.max(0, 100 - percUscite);
 
   const chartDataPatrimonio = React.useMemo(() => {
-    const points = (history || []).map(h => buildPatrimonioFromSnapshot(h));
+  const points = (history || []).map(h => buildPatrimonioFromSnapshot(h));
 
     const currTfr = state?.patrimonio?.tfr || 0;
     const currConti = (state?.patrimonio?.contiDeposito || []).reduce((s, c) => s + (c.saldo || 0), 0);
@@ -213,7 +224,17 @@ const Dashboard = (props) => {
   const currOro = (state?.patrimonio?.investimenti?.oro || []).reduce((s, o) => s + (o.valore || 0), 0);
   const currPatrimonio = currTfr + currConti + currBuoni + currAzioni + currEtf + currCrypto + currOro;
 
-  points.push({ date: saveDate, tfr: currTfr, conti: currConti, buoni: currBuoni, azioni: currAzioni, etf: currEtf, crypto: currCrypto, oro: currOro, patrimonio: currPatrimonio });
+    const canonicalSaveDate = saveDate ? String(saveDate).slice(0, 10) : '';
+    if (canonicalSaveDate) {
+      const idx = points.findIndex(p => String(p?.date || '').slice(0, 10) === canonicalSaveDate);
+      if (idx !== -1) {
+        points[idx] = { ...points[idx], tfr: currTfr, conti: currConti, buoni: currBuoni, azioni: currAzioni, etf: currEtf, crypto: currCrypto, oro: currOro, patrimonio: currPatrimonio, date: canonicalSaveDate };
+      } else {
+        points.push({ date: canonicalSaveDate, tfr: currTfr, conti: currConti, buoni: currBuoni, azioni: currAzioni, etf: currEtf, crypto: currCrypto, oro: currOro, patrimonio: currPatrimonio });
+      }
+    } else {
+      points.push({ date: saveDate, tfr: currTfr, conti: currConti, buoni: currBuoni, azioni: currAzioni, etf: currEtf, crypto: currCrypto, oro: currOro, patrimonio: currPatrimonio });
+    }
     points.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     const filtered = points.filter(p => {
       const d = p.date || '';
@@ -226,14 +247,24 @@ const Dashboard = (props) => {
 
   // chart data for Liquidità (mirrors Patrimonio chart logic)
   const chartDataLiquidita = React.useMemo(() => {
-    const points = (history || []).map(h => buildLiquiditaFromSnapshot(h));
+  const points = (history || []).map(h => buildLiquiditaFromSnapshot(h));
 
     const currConti = ((state?.liquidita?.conti || state?.patrimonio?.contiDeposito) || []).reduce((s, c) => s + (c.saldo || c.importo || 0), 0);
     const currCarte = (state?.liquidita?.carte || []).reduce((s, c) => s + (c.saldo || c.importo || 0), 0);
     const currAltro = (state?.liquidita?.altro || []).reduce((s, a) => s + (a.valore || a.importo || 0), 0);
     const currTot = currConti + currCarte + currAltro;
 
-    points.push({ date: saveDate, conti: currConti, carte: currCarte, altro: currAltro, totale: currTot });
+    const canonicalSaveDate = saveDate ? String(saveDate).slice(0, 10) : '';
+    if (canonicalSaveDate) {
+      const idx = points.findIndex(p => String(p?.date || '').slice(0, 10) === canonicalSaveDate);
+      if (idx !== -1) {
+        points[idx] = { ...points[idx], conti: currConti, carte: currCarte, altro: currAltro, totale: currTot, date: canonicalSaveDate };
+      } else {
+        points.push({ date: canonicalSaveDate, conti: currConti, carte: currCarte, altro: currAltro, totale: currTot });
+      }
+    } else {
+      points.push({ date: saveDate, conti: currConti, carte: currCarte, altro: currAltro, totale: currTot });
+    }
     points.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     const filtered = points.filter(p => {
       const d = p.date || '';
