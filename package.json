@@ -2,10 +2,13 @@
   "name": "dashboard",
   "version": "1.0.0",
   "description": "Dashboard finanziaria in React",
+  "homepage": "https://ADiLoreto.github.io/Dashboard",
   "main": "src/App.jsx",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -19,10 +22,12 @@
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^7.9.4",
     "recharts": "^2.7.2",
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "gh-pages": "^5.0.0",
     "react-scripts": "^5.0.1"
   },
   "browserslist": {
