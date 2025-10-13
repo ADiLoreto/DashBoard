@@ -78,9 +78,9 @@ const Dashboard = (props) => {
 
   // compute totaleUscite from state so Dashboard tab matches Uscite section
   const totaleUscite = (
-    (state?.uscite?.fisse || []).reduce ? state.uscite.fisse.reduce((sum, u) => sum + (u.importo || 0), 0) : 0
+  (Array.isArray(state?.uscite?.fisse) ? state.uscite.fisse.reduce((sum, u) => sum + (u.importo || 0), 0) : 0)
   ) + (
-    (state?.uscite?.variabili || []).reduce ? state.uscite.variabili.reduce((sum, u) => sum + (u.importo || 0), 0) : 0
+  (Array.isArray(state?.uscite?.variabili) ? state.uscite.variabili.reduce((sum, u) => sum + (u.importo || 0), 0) : 0)
   );
 
    const totals = {
@@ -107,12 +107,12 @@ const Dashboard = (props) => {
 
     const entrate =
       (st?.entrate?.stipendio?.netto || 0) +
-      ((st?.entrate?.bonus || []).reduce ? st.entrate.bonus.reduce((s, b) => s + (b.importo || 0), 0) : 0) +
-      ((st?.entrate?.altreEntrate || []).reduce ? st.entrate.altreEntrate.reduce((s, e) => s + (e.importo || 0), 0) : 0);
+  ((Array.isArray(st?.entrate?.bonus) ? st.entrate.bonus.reduce((s, b) => s + (b.importo || 0), 0) : 0) +
+  (Array.isArray(st?.entrate?.altreEntrate) ? st.entrate.altreEntrate.reduce((s, e) => s + (e.importo || 0), 0) : 0));
 
     const uscite =
-      ((st?.uscite?.fisse || []).reduce ? st.uscite.fisse.reduce((s, u) => s + (u.importo || 0), 0) : 0) +
-      ((st?.uscite?.variabili || []).reduce ? st.uscite.variabili.reduce((s, u) => s + (u.importo || 0), 0) : 0);
+  ((Array.isArray(st?.uscite?.fisse) ? st.uscite.fisse.reduce((s, u) => s + (u.importo || 0), 0) : 0) +
+  (Array.isArray(st?.uscite?.variabili) ? st.uscite.variabili.reduce((s, u) => s + (u.importo || 0), 0) : 0));
 
     return { date, entrate, uscite };
   };
@@ -155,12 +155,12 @@ const Dashboard = (props) => {
 
     const currEntrate =
       (state?.entrate?.stipendio?.netto || 0) +
-      ((state?.entrate?.bonus || []).reduce ? state.entrate.bonus.reduce((s, b) => s + (b.importo || 0), 0) : 0) +
-      ((state?.entrate?.altreEntrate || []).reduce ? state.entrate.altreEntrate.reduce((s, e) => s + (e.importo || 0), 0) : 0);
+  ((Array.isArray(state?.entrate?.bonus) ? state.entrate.bonus.reduce((s, b) => s + (b.importo || 0), 0) : 0) +
+  (Array.isArray(state?.entrate?.altreEntrate) ? state.entrate.altreEntrate.reduce((s, e) => s + (e.importo || 0), 0) : 0));
 
     const currUscite =
-      ((state?.uscite?.fisse || []).reduce ? state.uscite.fisse.reduce((s, u) => s + (u.importo || 0), 0) : 0) +
-      ((state?.uscite?.variabili || []).reduce ? state.uscite.variabili.reduce((s, u) => s + (u.importo || 0), 0) : 0);
+  ((Array.isArray(state?.uscite?.fisse) ? state.uscite.fisse.reduce((s, u) => s + (u.importo || 0), 0) : 0) +
+  (Array.isArray(state?.uscite?.variabili) ? state.uscite.variabili.reduce((s, u) => s + (u.importo || 0), 0) : 0));
 
   points.push({ date: saveDate, entrate: currEntrate, uscite: currUscite });
     points.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
@@ -177,12 +177,12 @@ const Dashboard = (props) => {
   // current totals for percentages (used in the side bracket)
   const currEntrate = (
     (state?.entrate?.stipendio?.netto || 0) +
-    ((state?.entrate?.bonus || []).reduce ? state.entrate.bonus.reduce((s, b) => s + (b.importo || 0), 0) : 0) +
-    ((state?.entrate?.altreEntrate || []).reduce ? state.entrate.altreEntrate.reduce((s, e) => s + (e.importo || 0), 0) : 0)
+  ((Array.isArray(state?.entrate?.bonus) ? state.entrate.bonus.reduce((s, b) => s + (b.importo || 0), 0) : 0) +
+  (Array.isArray(state?.entrate?.altreEntrate) ? state.entrate.altreEntrate.reduce((s, e) => s + (e.importo || 0), 0) : 0))
   );
   const currUscite = (
-    ((state?.uscite?.fisse || []).reduce ? state.uscite.fisse.reduce((s, u) => s + (u.importo || 0), 0) : 0) +
-    ((state?.uscite?.variabili || []).reduce ? state.uscite.variabili.reduce((s, u) => s + (u.importo || 0), 0) : 0)
+  ((Array.isArray(state?.uscite?.fisse) ? state.uscite.fisse.reduce((s, u) => s + (u.importo || 0), 0) : 0) +
+  (Array.isArray(state?.uscite?.variabili) ? state.uscite.variabili.reduce((s, u) => s + (u.importo || 0), 0) : 0))
   );
   // progetto sums: separate entrate (isCosto=false) and uscite (isCosto=true)
   const progettiList = state.progettiExtra || [];
