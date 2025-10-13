@@ -320,9 +320,12 @@ const Dashboard = (props) => {
                 type="button"
                 onClick={() => {
                     const draft = loadDraft(username);
-                    const snapshot = draft ? { ...draft, date: saveDate } : { date: saveDate, state };
+                    // costruisci uno stato completo partendo dallo state corrente, sovrascrivendo con il draft se presente
+                    const payloadState = { ...(state || {}), ...(draft || {}) };
+                    const snapshot = { date: saveDate, state: payloadState };
                     saveSnapshot(snapshot, username);
-                    clearDraft(username);
+                    // cancella il draft solo se esisteva
+                    if (draft) clearDraft(username);
                     setShowDraftMsg(false);
                     setSaveConfirm(`Snapshot salvato: ${saveDate}`);
                     setTimeout(() => setSaveConfirm(''), 3000);
@@ -365,9 +368,10 @@ const Dashboard = (props) => {
             }}
                 onClick={() => {
                   const draft = loadDraft(username);
-                  const snapshot = draft ? { ...draft, date: saveDate } : { date: saveDate, state };
+                  const payloadState = { ...(state || {}), ...(draft || {}) };
+                  const snapshot = { date: saveDate, state: payloadState };
                   saveSnapshot(snapshot, username);
-                  clearDraft(username);
+                  if (draft) clearDraft(username);
                   setShowDraftMsg(false);
                   setSaveConfirm(`Snapshot salvato: ${saveDate}`);
                   setTimeout(() => setSaveConfirm(''), 3000);
