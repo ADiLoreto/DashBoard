@@ -2,7 +2,7 @@
   "name": "dashboard",
   "version": "1.0.0",
   "description": "Dashboard finanziaria in React",
-  "homepage": "https://ADiLoreto.github.io/Dashboard",
+  "homepage": "https://adiloreto.github.io/DashBoard",
   "main": "src/App.jsx",
   "scripts": {
     "start": "react-scripts start",
