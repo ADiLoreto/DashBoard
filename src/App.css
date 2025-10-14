@@ -135,6 +135,8 @@ body {
   min-height: 100vh;
   padding: 20px;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+  position: relative; /* stacking context di default */
+  z-index: 20;
 }
 .sidebar h1, .sidebar h2, .sidebar h3 {
   color: var(--text-light);
@@ -259,4 +261,20 @@ body {
 @media (max-width: 760px) {
   .donut-card { flex-basis: 160px; max-width: 160px; min-width: 120px; box-shadow: none; }
   .donut-row { gap: 16px; }
+}
+
+/* Sidebar overlay su schermi piccoli */
+@media (max-width: 860px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 600; /* sopra il main, sotto i modal (1000+) */
+    box-shadow: 0 6px 24px rgba(0,0,0,0.45);
+    transition: width 220ms ease;
+  }
+  main {
+    padding-left: 0;
+  }
 }
