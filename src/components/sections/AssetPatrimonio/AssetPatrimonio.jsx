@@ -8,7 +8,7 @@ import { PieChart, Pie, Cell } from 'recharts';
 
 // animated inline SVG donut chart: items (array), getValue(item) -> number
 // responsive: when `responsive` is true the svg scales to its container (keeps aspect ratio)
-const DonutChart = ({ items = [], getValue, size = 64, thickness, responsive = true, offsetX = 0, offsetY = 0 }) => {
+const DonutChart = ({ items = [], getValue, size = 64, thickness, responsive = true, offsetX = 0, offsetY = 0, emptyScale = 0.7, emptyOffsetY = -27}) => {
   const data = (items || []).map((it, i) => ({
     name: it.titolo || it.name || `item-${i}`,
     value: Number(getValue(it) || 0),
@@ -26,10 +26,20 @@ const DonutChart = ({ items = [], getValue, size = 64, thickness, responsive = t
   // use a small padding for multi-slice donuts to minimize visible gaps (anti-aliasing still possible)
   const paddingAngle = nonZeroCount <= 1 ? 0 : 0.6;
 
+  const cx = outer + (offsetX || 0);
+  const cy = outer + (offsetY || 0);
+
   if (!total) {
+    // draw a smaller ring centered in the same viewBox so layout/responsive behaviour stays identical
+    const scale = Math.max(0.2, Math.min(1, emptyScale)); // clamp scale between 0.2 and 1
+    const emptyOuter = Math.round(outer * scale);
+    const emptyStroke = Math.max(3, Math.round(strokeWidth * scale));
+    const r = Math.max(0, emptyOuter - emptyStroke / 2);
+    const cyEmpty = outer + (typeof emptyOffsetY === 'number' ? emptyOffsetY : (offsetY || 0));
+
     return (
       <svg viewBox={`0 0 ${size} ${size}`} style={responsive ? { width: '100%', height: 'auto' } : { width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-        <circle cx={size/2} cy={size/2} r={inner} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
+        <circle cx={cx} cy={cyEmpty} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={emptyStroke} strokeLinecap="round" />
       </svg>
     );
   }
@@ -39,8 +49,8 @@ const DonutChart = ({ items = [], getValue, size = 64, thickness, responsive = t
       <Pie
         data={data}
         dataKey="value"
-        cx={outer + (offsetX || 0)}
-        cy={outer + (offsetY || 0)}
+        cx={cx}
+        cy={cy}
         innerRadius={inner}
         outerRadius={outer}
         startAngle={90}
