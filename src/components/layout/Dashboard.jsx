@@ -134,25 +134,17 @@ const Dashboard = (props) => {
   return { date, tfr, conti, buoni, azioni, etf, crypto, oro, patrimonio };
   };
 
-  // build liquidita breakdown from snapshot (matches structure used in Liquidita section)
+  // build liquidita breakdown from snapshot using canonical fields only
   const buildLiquiditaFromSnapshot = (snap) => {
     const st = snap && snap.state ? snap.state : snap || {};
     const date = snap?.date || st?.date || '';
+    const liq = st.liquidita || {};
 
-    // prefer current liquidita shape (contiCorrenti, cartePrepagate, contante),
-    // fall back to older/alternate shapes if present (liquidita.conti, patrimonio.contiDeposito, etc.)
-    const contiSource = st?.liquidita?.contiCorrenti || st?.liquidita?.conti || st?.patrimonio?.contiDeposito || [];
-    const conti = (contiSource || []).reduce((s, c) => s + (c?.saldo ?? c?.importo ?? 0), 0);
+    const conti = (liq.contiCorrenti || []).reduce((s, c) => s + Number(c?.saldo ?? 0), 0);
+    const carte = (liq.cartePrepagate || []).reduce((s, c) => s + Number(c?.saldo ?? 0), 0);
+    const altro = Number(liq.contante ?? 0);
 
-    const carteSource = st?.liquidita?.cartePrepagate || st?.liquidita?.carte || [];
-    const carte = (carteSource || []).reduce((s, c) => s + (c?.saldo ?? c?.importo ?? 0), 0);
-
-    // "altro" historically può essere contante o altro campo; prova varie posizioni
-    const altroVal = (st?.liquidita?.contante ?? st?.liquidita?.altro ?? st?.patrimonio?.contante ?? 0);
-    const altro = Number(altroVal || 0);
-
-    const totale = conti + carte + altro;
-    return { date, conti, carte, altro, totale };
+    return { date, conti, carte, altro, totale: conti + carte + altro };
   };
 
   const chartData = React.useMemo(() => {
@@ -250,18 +242,15 @@ const Dashboard = (props) => {
     return filtered.map(p => ({ ...p, date: p.date }));
   }, [history, state, dateRange, saveDate]);
 
-  // chart data for Liquidità (mirrors Patrimonio chart logic)
+  // chart data for Liquidità (uses canonical liquidita shape only)
   const chartDataLiquidita = React.useMemo(() => {
   const points = (history || []).map(h => buildLiquiditaFromSnapshot(h));
 
-    const currConti = ((state?.liquidita?.contiCorrenti || state?.liquidita?.conti || state?.patrimonio?.contiDeposito) || [])
-      .reduce((s, c) => s + (c?.saldo ?? c?.importo ?? 0), 0);
-
-    const currCarte = (state?.liquidita?.cartePrepagate || state?.liquidita?.carte || [])
-      .reduce((s, c) => s + (c?.saldo ?? c?.importo ?? 0), 0);
-
-    const currAltro = Number(state?.liquidita?.contante ?? state?.liquidita?.altro ?? state?.patrimonio?.contante ?? 0);
-
+    // current state values (canonical)
+    const currL = state?.liquidita || {};
+    const currConti = (currL.contiCorrenti || []).reduce((s, c) => s + Number(c?.saldo ?? 0), 0);
+    const currCarte = (currL.cartePrepagate || []).reduce((s, c) => s + Number(c?.saldo ?? 0), 0);
+    const currAltro = Number(currL.contante ?? 0);
     const currTot = currConti + currCarte + currAltro;
 
     const canonicalSaveDate = saveDate ? String(saveDate).slice(0, 10) : '';
@@ -273,7 +262,8 @@ const Dashboard = (props) => {
         points.push({ date: canonicalSaveDate, conti: currConti, carte: currCarte, altro: currAltro, totale: currTot });
       }
     } else {
-      points.push({ date: saveDate, conti: currConti, carte: currCarte, altro: currAltro, totale: currTot });
+      // append current state as last point
+      points.push({ date: currL.date || new Date().toISOString().slice(0,10), conti: currConti, carte: currCarte, altro: currAltro, totale: currTot });
     }
     points.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     const filtered = points.filter(p => {

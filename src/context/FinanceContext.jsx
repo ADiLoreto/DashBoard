@@ -123,17 +123,63 @@ export const FinanceProvider = ({ children }) => {
   const [state, dispatch] = useReducer(financeReducer, initialState);
   const [dirty, setDirty] = useState(false);
 
+  // normalize incoming state shapes to a canonical one used across the app
+  const normalizeState = (raw = {}) => {
+    // shallow clone to avoid mutating original
+    const s = JSON.parse(JSON.stringify(raw || {}));
+
+    // ensure liquidita exists and canonical fields are present
+    s.liquidita = s.liquidita || {};
+
+    // contiCorrenti: prefer contiCorrenti, fallback to liquidita.conti or patrimonio.contiDeposito
+    if (!Array.isArray(s.liquidita.contiCorrenti)) {
+      if (Array.isArray(s.liquidita.conti)) s.liquidita.contiCorrenti = s.liquidita.conti;
+      else if (Array.isArray(s.patrimonio?.contiDeposito)) s.liquidita.contiCorrenti = s.patrimonio.contiDeposito;
+      else s.liquidita.contiCorrenti = [];
+    }
+
+    // cartePrepagate: prefer cartePrepagate, fallback to liquidita.carte
+    if (!Array.isArray(s.liquidita.cartePrepagate)) {
+      if (Array.isArray(s.liquidita.carte)) s.liquidita.cartePrepagate = s.liquidita.carte;
+      else s.liquidita.cartePrepagate = [];
+    }
+
+    // contante: prefer explicit contante, fallback to altro or patrimonio.contante
+    if (s.liquidita.contante === undefined) {
+      s.liquidita.contante = (s.liquidita?.contante ?? s.liquidita?.altro ?? s.patrimonio?.contante ?? 0);
+    }
+
+    // normalize numeric values and account shapes
+    s.liquidita.contiCorrenti = (s.liquidita.contiCorrenti || []).map(c => ({
+      ...c,
+      saldo: Number(c?.saldo ?? c?.importo ?? 0)
+    }));
+    s.liquidita.cartePrepagate = (s.liquidita.cartePrepagate || []).map(c => ({
+      ...c,
+      saldo: Number(c?.saldo ?? c?.importo ?? 0)
+    }));
+    s.liquidita.contante = Number(s.liquidita.contante || 0);
+
+    return s;
+  };
+
   useEffect(() => {
     if (!username) return;
     const savedState = loadState(username);
-    if (savedState) dispatch({ type: 'LOAD_STATE', payload: savedState });
+    if (savedState) dispatch({ type: 'LOAD_STATE', payload: normalizeState(savedState) });
   }, [username]);
 
   useEffect(() => {
     if (!username) return;
     setDirty(true);
     const timeoutId = setTimeout(() => {
-      saveState(state, username);
+      // persist normalized state to storage (avoid saving multiple shapes)
+      try {
+        saveState(normalizeState(state), username);
+      } catch (e) {
+        // fallback to saving raw state if normalization fails
+        saveState(state, username);
+      }
       setDirty(false);
     }, 1000);
     return () => clearTimeout(timeoutId);
@@ -142,13 +188,19 @@ export const FinanceProvider = ({ children }) => {
   // auto-save draft example: whenever state changes save draft for user
   useEffect(() => {
     if (!username) return;
-    saveDraft(state, username);
+    try {
+      saveDraft(normalizeState(state), username);
+    } catch (e) {
+      saveDraft(state, username);
+    }
   }, [state, username]);
 
   // ensure draft is saved on page unload
   useEffect(() => {
     if (!username) return;
-    const handler = () => saveDraft(state, username);
+    const handler = () => {
+      try { saveDraft(normalizeState(state), username); } catch (e) { saveDraft(state, username); }
+    };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
   }, [state, username]);
