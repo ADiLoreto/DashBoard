@@ -139,13 +139,18 @@ const Dashboard = (props) => {
     const st = snap && snap.state ? snap.state : snap || {};
     const date = snap?.date || st?.date || '';
 
-    // fallback: some snapshots may keep cash accounts under patrimonio.contiDeposito
-    const contiSource = st?.liquidita?.conti || st?.patrimonio?.contiDeposito || [];
-    const conti = (contiSource || []).reduce((s, c) => s + (c.saldo || c.importo || 0), 0);
-    const carteSource = st?.liquidita?.carte || [];
-    const carte = (carteSource || []).reduce((s, c) => s + (c.saldo || c.importo || 0), 0);
-    const altroSource = st?.liquidita?.altro || [];
-    const altro = (altroSource || []).reduce((s, a) => s + (a.valore || a.importo || 0), 0);
+    // prefer current liquidita shape (contiCorrenti, cartePrepagate, contante),
+    // fall back to older/alternate shapes if present (liquidita.conti, patrimonio.contiDeposito, etc.)
+    const contiSource = st?.liquidita?.contiCorrenti || st?.liquidita?.conti || st?.patrimonio?.contiDeposito || [];
+    const conti = (contiSource || []).reduce((s, c) => s + (c?.saldo ?? c?.importo ?? 0), 0);
+
+    const carteSource = st?.liquidita?.cartePrepagate || st?.liquidita?.carte || [];
+    const carte = (carteSource || []).reduce((s, c) => s + (c?.saldo ?? c?.importo ?? 0), 0);
+
+    // "altro" historically può essere contante o altro campo; prova varie posizioni
+    const altroVal = (st?.liquidita?.contante ?? st?.liquidita?.altro ?? st?.patrimonio?.contante ?? 0);
+    const altro = Number(altroVal || 0);
+
     const totale = conti + carte + altro;
     return { date, conti, carte, altro, totale };
   };
@@ -249,9 +254,14 @@ const Dashboard = (props) => {
   const chartDataLiquidita = React.useMemo(() => {
   const points = (history || []).map(h => buildLiquiditaFromSnapshot(h));
 
-    const currConti = ((state?.liquidita?.conti || state?.patrimonio?.contiDeposito) || []).reduce((s, c) => s + (c.saldo || c.importo || 0), 0);
-    const currCarte = (state?.liquidita?.carte || []).reduce((s, c) => s + (c.saldo || c.importo || 0), 0);
-    const currAltro = (state?.liquidita?.altro || []).reduce((s, a) => s + (a.valore || a.importo || 0), 0);
+    const currConti = ((state?.liquidita?.contiCorrenti || state?.liquidita?.conti || state?.patrimonio?.contiDeposito) || [])
+      .reduce((s, c) => s + (c?.saldo ?? c?.importo ?? 0), 0);
+
+    const currCarte = (state?.liquidita?.cartePrepagate || state?.liquidita?.carte || [])
+      .reduce((s, c) => s + (c?.saldo ?? c?.importo ?? 0), 0);
+
+    const currAltro = Number(state?.liquidita?.contante ?? state?.liquidita?.altro ?? state?.patrimonio?.contante ?? 0);
+
     const currTot = currConti + currCarte + currAltro;
 
     const canonicalSaveDate = saveDate ? String(saveDate).slice(0, 10) : '';
