@@ -7,10 +7,11 @@ import AssetPatrimonio from '../sections/AssetPatrimonio/AssetPatrimonio';
 import Uscite from '../sections/Uscite/Uscite';
 import Liquidita from '../sections/Liquidita/Liquidita';
 import ProgettiExtra, { computeTotaleProgetti } from '../sections/ProgettiExtra/ProgettiExtra';
+import LibertaGiorni from '../sections/LibertaGiorni/LibertaGiorni';
 import { useFinancialCalculations } from '../../hooks/useFinancialCalculations';
 import { FinanceContext } from '../../context/FinanceContext';
 import { formatCurrency, getUserCurrency } from '../../utils/format';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Line, PieChart, Pie, Cell } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Line, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 
 const Dashboard = (props) => {
   const { activeSection, setActiveSection } = props;
@@ -20,6 +21,15 @@ const Dashboard = (props) => {
   const [tick, setTick] = useState(0);
   const [showDraftMsg, setShowDraftMsg] = useState(!!loadDraft(username));
   const [history, setHistory] = useState(() => loadHistory(username));
+  // user-specific settings (stored in localStorage under user_settings_<username>)
+  const [userSettings, setUserSettings] = useState(() => {
+    try {
+      const raw = localStorage.getItem(username ? `user_settings_${username}` : 'user_settings');
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  });
   const dateOptions = (history || []).map(h => h.date).filter(Boolean).sort();
   const defaultStart = dateOptions.length ? dateOptions[0] : new Date().toISOString().slice(0, 10);
   const [dateRange, setDateRange] = useState({
@@ -63,6 +73,16 @@ const Dashboard = (props) => {
     window.addEventListener('user_settings_changed', h);
     return () => window.removeEventListener('user_settings_changed', h);
   }, []);
+
+  // reload user settings whenever username or tick changes
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem(username ? `user_settings_${username}` : 'user_settings');
+      setUserSettings(raw ? JSON.parse(raw) : {});
+    } catch (e) {
+      setUserSettings({});
+    }
+  }, [username, tick]);
 
   // reload history when username or tick changes
   React.useEffect(() => {
@@ -208,6 +228,47 @@ const Dashboard = (props) => {
 
   const percUscite = currEntrate ? (currUscite / currEntrate) * 100 : 0;
   const percRemain = Math.max(0, 100 - percUscite);
+
+  // valori per le "candele"
+  const netEntrateValue = currEntrate - currUscite;
+  const totaleWealth = (totalePatrimonio || 0) + (totaleLiquidita || 0) + (totaleProgetti || 0);
+  const maxCandle = Math.max(Math.abs(netEntrateValue), Math.abs(totaleWealth), 1); // per scala Y minima sensata
+
+  // helper: render a compact "goal bar" using inline SVG.
+  // - current: valore attuale (number, può essere negativo)
+  // - goal: valore obiettivo (number, >=0)
+  // - color: colore per la porzione "attuale" (es. verde/rosso/blue)
+  const renderGoalBar = (current, goal, color = '#27ae60', height = 96, width = 36) => {
+    const max = Math.max(Math.abs(current), Math.abs(goal), 1);
+    // map value to pixel height
+    const scale = v => Math.round((Math.abs(v) / max) * height);
+    const goalH = scale(goal);
+    const currH = scale(current);
+    const centerY = Math.round(height); // bottom baseline
+    // if current negative -> draw colored downwards below baseline
+    const currY = current >= 0 ? (centerY - currH) : centerY;
+    const goalY = centerY - goalH;
+
+    // small labels formatting
+    const fmt = v => formatCurrency(v || 0, currency);
+
+    return (
+      <div style={{ width: width, height: height + 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+        <svg width={width} height={height} role="img" aria-hidden>
+          {/* grey goal bar (background) */}
+          <rect x={Math.round(width * 0.15)} y={goalY} width={Math.round(width * 0.7)} height={goalH} fill="rgba(200,200,200,0.35)" rx="6" />
+          {/* colored current bar (drawn on top; if negative draw below baseline) */}
+          <rect x={Math.round(width * 0.25)} y={currY} width={Math.round(width * 0.5)} height={currH} fill={current >= 0 ? color : '#ff6b6b'} rx="6" />
+          {/* baseline */}
+          <line x1="0" y1={centerY} x2={width} y2={centerY} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+        </svg>
+        <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
+          <div style={{ fontWeight: 700, color: 'var(--bg-light)' }}>{fmt(current)}</div>
+          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>{fmt(goal)}</div>
+        </div>
+      </div>
+    );
+  };
 
   const chartDataPatrimonio = React.useMemo(() => {
   const points = (history || []).map(h => buildPatrimonioFromSnapshot(h));
@@ -411,17 +472,25 @@ const Dashboard = (props) => {
     <div style={{ width: '100%', maxWidth: 1720, margin: '12px auto 24px' }}>
       <div style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'center' }}>
 
-        {/* left donut */}
-        <div className="donut-card" role="presentation" aria-hidden>
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie data={leftDonutData} dataKey="value" cx="50%" cy="50%" innerRadius="50%" outerRadius="90%" paddingAngle={leftPaddingAngle} startAngle={90} endAngle={-270} isAnimationActive animationDuration={900} stroke="none">
-                <Cell key="entrate" fill="#16a085" stroke="none" />
-                <Cell key="uscite" fill="#ff6b6b" stroke="none" />
-              </Pie>
-              <Tooltip formatter={(val) => formatCurrency(val, currency)} />
-            </PieChart>
-          </ResponsiveContainer>
+        {/* left donut + goal-bar (stacked visual) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', width: 140 }}>
+          <div className="donut-card" role="presentation" aria-hidden style={{ width: 140, height: 140 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={leftDonutData} dataKey="value" cx="50%" cy="50%" innerRadius="50%" outerRadius="90%" paddingAngle={leftPaddingAngle} startAngle={90} endAngle={-270} isAnimationActive animationDuration={900} stroke="none">
+                  <Cell key="entrate" fill="#16a085" stroke="none" />
+                  <Cell key="uscite" fill="#ff6b6b" stroke="none" />
+                </Pie>
+                <Tooltip formatter={(val) => formatCurrency(val, currency)} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* goal/comparison bar: current (green/red) vs goal (grey) */}
+          <div style={{ width: 120, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {renderGoalBar(netEntrateValue, Number(userSettings?.monthlyIncomeGoal ?? userSettings?.entrateObiettivo ?? 0), netEntrateValue >= 0 ? '#27ae60' : '#ff6b6b', 96, 40)}
+          </div>
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 6 }}>Entrate nette (vs obiettivo)</div>
         </div>
 
         {/* center gray box that contains title + chart */}
@@ -459,17 +528,25 @@ const Dashboard = (props) => {
           </div>
         </div>
 
-        {/* right donut */}
-        <div className="donut-card" role="presentation" aria-hidden>
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie data={rightDonutData} dataKey="value" cx="50%" cy="50%" innerRadius="50%" outerRadius="90%" paddingAngle={rightPaddingAngle} startAngle={90} endAngle={-270} isAnimationActive animationDuration={900} stroke="none">
-                <Cell key="entrateProj" fill="#16a085" stroke="none" />
-                <Cell key="usciteProj" fill="#ff6b6b" stroke="none" />
-              </Pie>
-              <Tooltip formatter={(val) => formatCurrency(val, currency)} />
-            </PieChart>
-          </ResponsiveContainer>
+        {/* right donut + goal-bar (stacked visual) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', width: 140 }}>
+          <div className="donut-card" role="presentation" aria-hidden style={{ width: 140, height: 140 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={rightDonutData} dataKey="value" cx="50%" cy="50%" innerRadius="50%" outerRadius="90%" paddingAngle={rightPaddingAngle} startAngle={90} endAngle={-270} isAnimationActive animationDuration={900} stroke="none">
+                  <Cell key="entrateProj" fill="#16a085" stroke="none" />
+                  <Cell key="usciteProj" fill="#ff6b6b" stroke="none" />
+                </Pie>
+                <Tooltip formatter={(val) => formatCurrency(val, currency)} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* goal/comparison bar: patrimonio attuale (blue) vs patrimonio obiettivo (grey) */}
+          <div style={{ width: 120, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {renderGoalBar(totaleWealth, Number(userSettings?.patrimonioGoal ?? userSettings?.patrimonioObiettivo ?? 0), '#06d2fa', 96, 40)}
+          </div>
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 6 }}>Patrimonio complessivo (vs obiettivo)</div>
         </div>
 
       </div>
@@ -574,6 +651,7 @@ const Dashboard = (props) => {
       {activeSection === 'Liquidità' && <Liquidita dateRange={dateRange} />}
       {activeSection === 'Uscite' && <Uscite dateRange={dateRange} />}
       {activeSection === 'Progetti Extra' && <ProgettiExtra dateRange={dateRange} />}
+      {activeSection === 'Libertà Giorni' && <LibertaGiorni />}
       {/* ...altre sezioni... */}
     </div>
   )}
