@@ -253,18 +253,18 @@ const Dashboard = (props) => {
     const fmt = v => formatCurrency(v || 0, currency);
 
     return (
-      <div style={{ width: width, height: height + 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-        <svg width={width} height={height} role="img" aria-hidden>
+      <div className="goal-bar" style={{ width: width }}>
+        <svg width={width} height={height} role="img" aria-hidden style={{ display: 'block', flex: `0 0 ${height}px` }}>
           {/* grey goal bar (background) */}
-          <rect x={Math.round(width * 0.15)} y={goalY} width={Math.round(width * 0.7)} height={goalH} fill="rgba(200,200,200,0.35)" rx="6" />
+          <rect className="goal-rect" x={Math.round(width * 0.15)} y={goalY} width={Math.round(width * 0.7)} height={goalH} rx="6" />
           {/* colored current bar (drawn on top; if negative draw below baseline) */}
-          <rect x={Math.round(width * 0.25)} y={currY} width={Math.round(width * 0.5)} height={currH} fill={current >= 0 ? color : '#ff6b6b'} rx="6" />
+          <rect className="current-rect" x={Math.round(width * 0.25)} y={currY} width={Math.round(width * 0.5)} height={currH} fill={current >= 0 ? color : '#ff6b6b'} rx="6" />
           {/* baseline */}
           <line x1="0" y1={centerY} x2={width} y2={centerY} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
         </svg>
-        <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
-          <div style={{ fontWeight: 700, color: 'var(--bg-light)' }}>{fmt(current)}</div>
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>{fmt(goal)}</div>
+        <div className="goal-bar-labels" style={{ width: '100%' }}>
+          <div className="goal-bar-current" style={{ fontWeight: 700, color: 'var(--bg-light)', lineHeight: 1 }}>{fmt(current)}</div>
+          <div className="goal-bar-goal" style={{ fontSize: 15 }}>{fmt(goal)}</div>
         </div>
       </div>
     );

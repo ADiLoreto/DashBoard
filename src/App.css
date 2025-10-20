@@ -232,13 +232,42 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  position: relative; /* per pseudo-element dell'ombra */
+  z-index: 1;
+  /* rimosso box-shadow diretto per evitare ombre ovali */
 }
 
 /* prevenire che le donut si sovrappongano visivamente ai grafici: */
-.donut-row, .donut-card {
+.donut-row {
   position: relative;
   z-index: 0;
+}
+
+/* create a perfectly circular shadow behind each donut using a centered square pseudo-element */
+.donut-card::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* make the pseudo-element a square that fits inside the card: use aspect-ratio and max-height
+     so it becomes min(width, height) of the container, then center it */
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0; /* behind the content */
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+
+/* ensure internal content (ResponsiveContainer / SVG) fills the circular area exactly and stays above the shadow */
+.donut-card > * {
+  width: 100% !important;
+  height: 100% !important;
+  position: relative;
+  z-index: 1;
 }
 
 .chart-container {
@@ -278,3 +307,13 @@ body {
     padding-left: 0;
   }
 }
+
+/* goal bar: separation svg / label to avoid overlap when fonts increase */
+.goal-bar { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.goal-bar svg { display: block; flex: 0 0 auto; }
+.goal-bar .goal-rect { fill: rgba(200,200,200,0.35); transition: height 300ms ease, y 300ms ease; }
+.goal-bar .current-rect { transition: height 300ms ease, y 300ms ease; }
+.goal-bar-labels { min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding-top: 2px; }
+.goal-bar-labels .goal-bar-current { font-size: var(--goal-current-size, 22px); line-height: 1; }
+.goal-bar-labels .goal-bar-goal { font-size: var(--goal-goal-size, 12px); color: rgba(255,255,255,0.5); }
+
