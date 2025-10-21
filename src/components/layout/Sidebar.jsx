@@ -69,7 +69,7 @@ const Sidebar = ({ onSelect, selected, onBack }) => {
               fontWeight: selected === tab ? 'bold' : 'normal',
               borderLeft: selected === tab ? '4px solid var(--accent-cyan)' : 'none'
             }}
-            onClick={e => { e.preventDefault(); onSelect && onSelect(tab); }}
+            onClick={e => { e.preventDefault(); const section = (tab === 'Obiettivi') ? 'Libertà Giorni' : tab; onSelect && onSelect(section); }}
           >
             {collapsed ? tab.split(' ').map(w=>w[0]).join('') : tab}
           </a>

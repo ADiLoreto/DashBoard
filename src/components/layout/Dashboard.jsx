@@ -473,7 +473,7 @@ const Dashboard = (props) => {
       <div style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'center' }}>
 
         {/* left donut + goal-bar (stacked visual) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', width: 140 }}>
+  <div className="donut-item" style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', width: 140 }}>
           <div className="donut-card" role="presentation" aria-hidden style={{ width: 140, height: 140 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -529,7 +529,7 @@ const Dashboard = (props) => {
         </div>
 
         {/* right donut + goal-bar (stacked visual) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', width: 140 }}>
+  <div className="donut-item" style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', width: 140 }}>
           <div className="donut-card" role="presentation" aria-hidden style={{ width: 140, height: 140 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
