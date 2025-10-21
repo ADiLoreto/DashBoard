@@ -2,11 +2,12 @@ import React, { useContext, useState } from 'react';
 import BigTab from '../../ui/BigTab';
 import { FinanceContext } from '../../../context/FinanceContext';
 import { z } from 'zod';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LabelList } from 'recharts';
 
 const stipendioSchema = z.object({
   netto: z.number().min(0),
-  hours: z.number().min(0).optional()
+  hours: z.number().min(0).optional(),
+  days: z.number().min(0).optional()
 });
 
 const Stipendio = () => {
@@ -26,9 +27,10 @@ const Stipendio = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false); // for stipendio
   const [showEntryModal, setShowEntryModal] = useState(false); // for editing an entry
-  const [newEntry, setNewEntry] = useState({ title: '', value: '', hours: '' });
+  const [newEntry, setNewEntry] = useState({ title: '', value: '', hours: '', days: '' });
   const [editNetto, setEditNetto] = useState((state.entrate.stipendio.netto && state.entrate.stipendio.netto > 0) ? state.entrate.stipendio.netto : '');
-  const [editHours, setEditHours] = useState((state.entrate.stipendio.hours !== undefined) ? state.entrate.stipendio.hours : 26);
+  const [editHours, setEditHours] = useState((state.entrate.stipendio.hours !== undefined) ? state.entrate.stipendio.hours : 8);
+  const [editDays, setEditDays] = useState((state.entrate.stipendio.days !== undefined) ? state.entrate.stipendio.days : 22);
   const [editingEntry, setEditingEntry] = useState(null);
 
   const handleTitleEdit = () => setIsEditingTitle(true);
@@ -39,15 +41,16 @@ const Stipendio = () => {
     if (newEntry.title && newEntry.value) {
       // save to context as altra entrata
   const id = Math.random().toString(36).slice(2, 9);
-  dispatch({ type: 'ADD_ENTRATA', payload: { id, titolo: newEntry.title, importo: Number(newEntry.value), hours: Number(newEntry.hours || 0), date: new Date().toISOString().slice(0,10) } });
-      setNewEntry({ title: '', value: '' });
+  dispatch({ type: 'ADD_ENTRATA', payload: { id, titolo: newEntry.title, importo: Number(newEntry.value), hours: Number(newEntry.hours || 0), days: Number(newEntry.days || 0), date: new Date().toISOString().slice(0,10) } });
+      setNewEntry({ title: '', value: '', hours: '', days: '' });
       setShowAddModal(false);
     }
   };
 
   const openEditModal = () => {
   setEditNetto((state.entrate.stipendio.netto && state.entrate.stipendio.netto > 0) ? state.entrate.stipendio.netto : '');
-    setEditHours((state.entrate.stipendio.hours !== undefined) ? state.entrate.stipendio.hours : 26);
+    setEditHours((state.entrate.stipendio.hours !== undefined) ? state.entrate.stipendio.hours : 8);
+    setEditDays((state.entrate.stipendio.days !== undefined) ? state.entrate.stipendio.days : 22);
     setShowEditModal(true);
   };
 
@@ -74,26 +77,33 @@ const Stipendio = () => {
     (state.entrate.bonus ? state.entrate.bonus.reduce((sum, b) => sum + (b.importo || 0), 0) : 0) +
     (state.entrate.altreEntrate ? state.entrate.altreEntrate.reduce((sum, e) => sum + (e.importo !== undefined ? e.importo : Number(e.value) || 0), 0) : 0);
 
-  // Calculate hourly pay for stipendio and other entries
-  const calcHourly = (amount, hours) => {
+  // Calculate hourly pay for stipendio and other entries using hours * days
+  const calcHourly = (amount, hours, days) => {
     const h = Number(hours || 0);
-    if (!h || h <= 0) return null;
-    return amount / h;
+    const d = Number(days || 0);
+    if (!h || h <= 0 || !d || d <= 0) return null;
+    return amount / (h * d);
   };
 
-  const stipendioHourly = calcHourly(state.entrate.stipendio.netto || 0, state.entrate.stipendio.hours || 0);
+  const stipendioHourly = calcHourly(state.entrate.stipendio.netto || 0, state.entrate.stipendio.hours || 0, state.entrate.stipendio.days || 0);
 
-  // Build hourly data list for chart (only entries with valid hours)
+  // Build hourly data list for chart (only entries with valid hours and days)
   const hourlyData = [];
   if (stipendioHourly !== null) hourlyData.push({ name: title || 'Stipendio', hourly: Number(stipendioHourly.toFixed(2)) });
   (state.entrate.altreEntrate || []).forEach(entry => {
     const amount = entry.importo !== undefined ? Number(entry.importo) : Number(entry.value || 0);
     const h = Number(entry.hours || 0);
-    if (h && h > 0) {
-      const hourly = calcHourly(amount, h);
+    const d = Number(entry.days || 0);
+    if (h && h > 0 && d && d > 0) {
+      const hourly = calcHourly(amount, h, d);
       hourlyData.push({ name: entry.titolo || entry.title || 'Voce', hourly: Number((hourly || 0).toFixed(2)) });
     }
   });
+
+  // Sort descending so highest hourly pay appears on top
+  if (hourlyData.length > 1) {
+    hourlyData.sort((a, b) => b.hourly - a.hourly);
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
@@ -115,16 +125,19 @@ const Stipendio = () => {
             valueStyle={{ fontSize: 22, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
             allowTitleEdit={false}
             onUpdate={update => {
-              if (update.value !== undefined) handleSave({ netto: Number(update.value), hours: editHours });
+              if (update.value !== undefined) handleSave({ netto: Number(update.value), hours: Number(editHours || 0), days: Number(editDays || 0) });
             }}
             footer={(
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                 <div style={{ fontSize: 16, color: 'var(--text-light)', fontFamily: 'Montserrat, sans-serif', fontWeight: 700 }}>Time / h</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <input type="number" value={editHours} onChange={e => setEditHours(Number(e.target.value))} style={{ width: 96, height: 44, lineHeight: '44px', padding: '0 13px', boxSizing: 'border-box', borderRadius: 18, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', background: 'var(--bg-light)', fontFamily: 'Roboto Mono, monospace', fontSize: 20, WebkitAppearance: 'none', MozAppearance: 'textfield' }} />
-                  </div>
-                  {/* hourly pay display */}
-                  <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-muted)' }}>{stipendioHourly !== null ? (`Paga oraria: ${stipendioHourly.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`) : 'Paga oraria: -'}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <input type="number" value={editHours} onChange={e => setEditHours(Number(e.target.value))} onBlur={() => handleSave({ netto: Number(state.entrate.stipendio.netto || 0), hours: Number(editHours || 0), days: Number(editDays || 0) })} style={{ width: 70, height: 44, lineHeight: '44px', padding: '0 13px', boxSizing: 'border-box', borderRadius: 18, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', background: 'var(--bg-light)', fontFamily: 'Roboto Mono, monospace', fontSize: 20, WebkitAppearance: 'none', MozAppearance: 'textfield' }} />
+                        <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>ore/giorno</div>
+                        <input type="number" value={editDays} onChange={e => setEditDays(Number(e.target.value))} onBlur={() => handleSave({ netto: Number(state.entrate.stipendio.netto || 0), hours: Number(editHours || 0), days: Number(editDays || 0) })} style={{ width: 70, height: 44, lineHeight: '44px', padding: '0 13px', boxSizing: 'border-box', borderRadius: 18, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', background: 'var(--bg-light)', fontFamily: 'Roboto Mono, monospace', fontSize: 20, WebkitAppearance: 'none', MozAppearance: 'textfield' }} />
+                        <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>giorni/mese</div>
+                      </div>
+                      {/* hourly pay display */}
+                      <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-muted)' }}>{stipendioHourly !== null ? (`Paga oraria: ${stipendioHourly.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`) : 'Paga oraria: -'}</div>
               </div>
             )}
           />
@@ -143,10 +156,15 @@ const Stipendio = () => {
               onDelete={() => handleDeleteEntry(entry.id)}
               footer={(
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-            <div style={{ fontSize: 16, color: 'var(--text-light)', fontFamily: 'Montserrat, sans-serif', fontWeight: 700 }}>Time / h</div>
-                  <input type="number" value={entry.hours || ''} onChange={e => handleUpdateEntry({ ...entry, hours: Number(e.target.value || 0) })} style={{ width: 96, height: 40, lineHeight: '40px', padding: '0 13px', boxSizing: 'border-box', borderRadius: 18, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', background: 'var(--bg-light)', fontFamily: 'Roboto Mono, monospace', fontSize: 20, WebkitAppearance: 'none', MozAppearance: 'textfield' }} />
+                <div style={{ fontSize: 16, color: 'var(--text-light)', fontFamily: 'Montserrat, sans-serif', fontWeight: 700 }}>Time / h</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input type="number" value={entry.hours || ''} onChange={e => handleUpdateEntry({ ...entry, hours: Number(e.target.value || 0) })} style={{ width: 70, height: 40, lineHeight: '40px', padding: '0 13px', boxSizing: 'border-box', borderRadius: 18, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', background: 'var(--bg-light)', fontFamily: 'Roboto Mono, monospace', fontSize: 20, WebkitAppearance: 'none', MozAppearance: 'textfield' }} />
+                    <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>ore/giorno</div>
+                    <input type="number" value={entry.days || ''} onChange={e => handleUpdateEntry({ ...entry, days: Number(e.target.value || 0) })} style={{ width: 70, height: 40, lineHeight: '40px', padding: '0 13px', boxSizing: 'border-box', borderRadius: 18, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', background: 'var(--bg-light)', fontFamily: 'Roboto Mono, monospace', fontSize: 20, WebkitAppearance: 'none', MozAppearance: 'textfield' }} />
+                    <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>giorni/mese</div>
+                  </div>
                   {/* hourly pay for this entry */}
-                  <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-muted)' }}>{(entry.hours && entry.hours > 0) ? (`Paga oraria: ${( (entry.importo !== undefined ? Number(entry.importo) : Number(entry.value || 0)) / Number(entry.hours) ).toLocaleString('it-IT',{ minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`) : 'Paga oraria: -'}</div>
+                  <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-muted)' }}>{(entry.hours && entry.hours > 0 && entry.days && entry.days > 0) ? (`Paga oraria: ${( (entry.importo !== undefined ? Number(entry.importo) : Number(entry.value || 0)) / (Number(entry.hours) * Number(entry.days)) ).toLocaleString('it-IT',{ minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`) : 'Paga oraria: -'}</div>
                 </div>
               )}
             />
@@ -213,6 +231,13 @@ const Stipendio = () => {
               onChange={e => setNewEntry({ ...newEntry, hours: e.target.value })}
               style={{ width: '100%', marginBottom: 12, padding: '12px', fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }}
             />
+            <input
+              type="number"
+              placeholder="Giorni / mese"
+              value={newEntry.days}
+              onChange={e => setNewEntry({ ...newEntry, days: e.target.value })}
+              style={{ width: '100%', marginBottom: 12, padding: '12px', fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }}
+            />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
               <button onClick={() => setShowAddModal(false)} style={{ background: 'var(--bg-medium)', color: 'var(--bg-light)', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 'bold', fontSize: 16, cursor: 'pointer' }}>Annulla</button>
               <button onClick={handleAddEntry} style={{ background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 'bold', fontSize: 16, cursor: 'pointer' }}>Aggiungi</button>
@@ -229,10 +254,12 @@ const Stipendio = () => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart layout="vertical" data={hourlyData} margin={{ top: 8, right: 24, left: 8, bottom: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                <XAxis type="number" tickFormatter={(v) => `${v} €`} tick={{ fill: 'var(--text-muted)' }} />
+                    <XAxis type="number" domain={[0, 'dataMax']} tickFormatter={(v) => `${v} €`} tick={{ fill: 'var(--text-muted)' }} />
                 <YAxis type="category" dataKey="name" width={160} tick={{ fill: 'var(--text-muted)' }} />
                 <Tooltip formatter={(val) => `${Number(val).toLocaleString('it-IT',{ minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`} />
-                <Bar dataKey="hourly" fill="#06d2fa" radius={[4, 4, 4, 4]} />
+                    <Bar dataKey="hourly" fill="#06d2fa" radius={[4, 4, 4, 4]}>
+                      <LabelList dataKey="hourly" position="right" formatter={(v) => `${Number(v).toLocaleString('it-IT',{ minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`} />
+                    </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -259,10 +286,12 @@ const Stipendio = () => {
               <input type="number" value={editNetto} onChange={e => setEditNetto(e.target.value)} style={{ padding: 12, fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }} />
               <label style={{ fontWeight: 700 }}>Time / h</label>
               <input type="number" value={editHours} onChange={e => setEditHours(e.target.value)} style={{ padding: 12, fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }} />
+              <label style={{ fontWeight: 700 }}>Giorni / mese</label>
+              <input type="number" value={editDays} onChange={e => setEditDays(e.target.value)} style={{ padding: 12, fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 16 }}>
               <button onClick={() => setShowEditModal(false)} style={{ background: 'var(--bg-medium)', color: 'var(--bg-light)', border: 'none', borderRadius: 8, padding: '10px 20px' }}>Annulla</button>
-              <button onClick={() => { const n = Number(editNetto || 0); const h = Number(editHours || 0); handleSave({ netto: n, hours: h }); setShowEditModal(false); }} style={{ background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', borderRadius: 8, padding: '10px 20px' }}>Salva</button>
+              <button onClick={() => { const n = Number(editNetto || 0); const h = Number(editHours || 0); const d = Number(editDays || 0); handleSave({ netto: n, hours: h, days: d }); setShowEditModal(false); }} style={{ background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', borderRadius: 8, padding: '10px 20px' }}>Salva</button>
             </div>
           </div>
         </div>
