@@ -469,7 +469,7 @@ const Dashboard = (props) => {
     )}
   {/* --- overview with inline responsive donuts --- */}
   {activeSection === null && chartData && chartData.length > 0 && (
-    <div style={{ width: '100%', maxWidth: 1720, margin: '12px auto 24px' }}>
+  <div style={{ width: '100%', maxWidth: 1720, margin: '12px auto 12px' }}>
       <div style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'center' }}>
 
         {/* left donut + goal-bar (stacked visual) */}
@@ -493,8 +493,8 @@ const Dashboard = (props) => {
           <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 6 }}>Entrate nette (vs obiettivo)</div>
         </div>
 
-        {/* center gray box that contains title + chart */}
-        <div style={{ flex: 1, minWidth: 0, padding: 8, background: 'var(--bg-medium)', borderRadius: 8 }}>
+  {/* center gray box that contains title + chart */}
+  <div style={{ flex: 1, minWidth: 0, padding: 8, background: 'var(--bg-medium)', borderRadius: 8, maxWidth: 1100, margin: '0 auto' }}>
           <h3 style={{ color: 'var(--bg-light)', margin: '6px 0 12px' }}>Entrate vs Uscite (storico)</h3>
           <div style={{ display: 'flex', gap: 16, alignItems: 'stretch' }}>
             <div style={{ flex: 1, minWidth: 0, height: 220 }}>
