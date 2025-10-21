@@ -131,9 +131,29 @@ const Stipendio = () => {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                 <div style={{ fontSize: 16, color: 'var(--text-light)', fontFamily: 'Montserrat, sans-serif', fontWeight: 700 }}>Time / h</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <input type="number" value={editHours} onChange={e => setEditHours(Number(e.target.value))} onBlur={() => handleSave({ netto: Number(state.entrate.stipendio.netto || 0), hours: Number(editHours || 0), days: Number(editDays || 0) })} style={{ width: 70, height: 44, lineHeight: '44px', padding: '0 13px', boxSizing: 'border-box', borderRadius: 18, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', background: 'var(--bg-light)', fontFamily: 'Roboto Mono, monospace', fontSize: 20, WebkitAppearance: 'none', MozAppearance: 'textfield' }} />
+                        <input
+                          type="number"
+                          value={editHours}
+                          onChange={e => {
+                            const val = Number(e.target.value || 0);
+                            setEditHours(val);
+                            // update stipendio immediately so calcHourly sees the change (same behavior as other entries)
+                            handleSave({ netto: Number(state.entrate.stipendio.netto || 0), hours: val, days: Number(editDays || 0) });
+                          }}
+                          style={{ width: 70, height: 44, lineHeight: '44px', padding: '0 13px', boxSizing: 'border-box', borderRadius: 18, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', background: 'var(--bg-light)', fontFamily: 'Roboto Mono, monospace', fontSize: 20, WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+                        />
                         <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>ore/giorno</div>
-                        <input type="number" value={editDays} onChange={e => setEditDays(Number(e.target.value))} onBlur={() => handleSave({ netto: Number(state.entrate.stipendio.netto || 0), hours: Number(editHours || 0), days: Number(editDays || 0) })} style={{ width: 70, height: 44, lineHeight: '44px', padding: '0 13px', boxSizing: 'border-box', borderRadius: 18, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', background: 'var(--bg-light)', fontFamily: 'Roboto Mono, monospace', fontSize: 20, WebkitAppearance: 'none', MozAppearance: 'textfield' }} />
+                        <input
+                          type="number"
+                          value={editDays}
+                          onChange={e => {
+                            const val = Number(e.target.value || 0);
+                            setEditDays(val);
+                            // update stipendio immediately so calcHourly sees the change (same behavior as other entries)
+                            handleSave({ netto: Number(state.entrate.stipendio.netto || 0), hours: Number(editHours || 0), days: val });
+                          }}
+                          style={{ width: 70, height: 44, lineHeight: '44px', padding: '0 13px', boxSizing: 'border-box', borderRadius: 18, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', background: 'var(--bg-light)', fontFamily: 'Roboto Mono, monospace', fontSize: 20, WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+                        />
                         <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>giorni/mese</div>
                       </div>
                       {/* hourly pay display */}
