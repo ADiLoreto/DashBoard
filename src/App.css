@@ -223,10 +223,10 @@ body {
 
 /* rendi le card responsive: possono ridursi ma mantengono proporzioni */
 .donut-card {
-  flex: 0 1 280px;       /* non cresce, può ridursi, base 280px */
+  flex: 0 1 160px;       /* non cresce, può ridursi, base 280px */
   box-sizing: border-box;
   min-width: 160px;      /* limite inferiore (corrisponde a media query) */
-  max-width: 280px;
+  max-width: 160px;
   aspect-ratio: 1 / 1;   /* mantiene proporzione quadrata -> circolare con border-radius */
   height: auto;
   border-radius: 50%;
