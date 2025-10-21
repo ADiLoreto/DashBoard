@@ -490,7 +490,7 @@ const Dashboard = (props) => {
           <div style={{ width: 120, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {renderGoalBar(netEntrateValue, Number(userSettings?.monthlyIncomeGoal ?? userSettings?.entrateObiettivo ?? 0), netEntrateValue >= 0 ? '#27ae60' : '#ff6b6b', 96, 40)}
           </div>
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 6 }}>Entrate nette (vs obiettivo)</div>
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 6 }}>Entrate vs obiettivo</div>
         </div>
 
   {/* center gray box that contains title + chart */}
@@ -546,7 +546,7 @@ const Dashboard = (props) => {
           <div style={{ width: 120, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {renderGoalBar(totaleWealth, Number(userSettings?.patrimonioGoal ?? userSettings?.patrimonioObiettivo ?? 0), '#06d2fa', 96, 40)}
           </div>
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 6 }}>Patrimonio complessivo (vs obiettivo)</div>
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 6 }}>Patrimonio vs obiettivo</div>
         </div>
 
       </div>
