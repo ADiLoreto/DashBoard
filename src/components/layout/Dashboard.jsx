@@ -498,7 +498,7 @@ const Dashboard = (props) => {
   {/* center gray box that contains title + chart */}
   <div style={{ flex: 1, minWidth: 0, padding: 8, background: 'var(--bg-medium)', borderRadius: 8, maxWidth: 1100, margin: '0 auto' }}>
           <h3 style={{ color: 'var(--bg-light)', margin: '6px 0 12px' }}>Entrate vs Uscite (storico)</h3>
-          <div style={{ display: 'flex', gap: 16, alignItems: 'stretch' }}>
+          <div style={{ display: 'flex', gap: 1, alignItems: 'stretch' }}>
             <div style={{ flex: 1, minWidth: 0, height: 220 }}>
               <ResponsiveContainer>
                 <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 32, bottom: 8 }}>
