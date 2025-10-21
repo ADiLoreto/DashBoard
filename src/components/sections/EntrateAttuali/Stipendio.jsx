@@ -2,6 +2,7 @@ import React, { useContext, useState } from 'react';
 import BigTab from '../../ui/BigTab';
 import { FinanceContext } from '../../../context/FinanceContext';
 import { z } from 'zod';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 const stipendioSchema = z.object({
   netto: z.number().min(0),
@@ -73,6 +74,27 @@ const Stipendio = () => {
     (state.entrate.bonus ? state.entrate.bonus.reduce((sum, b) => sum + (b.importo || 0), 0) : 0) +
     (state.entrate.altreEntrate ? state.entrate.altreEntrate.reduce((sum, e) => sum + (e.importo !== undefined ? e.importo : Number(e.value) || 0), 0) : 0);
 
+  // Calculate hourly pay for stipendio and other entries
+  const calcHourly = (amount, hours) => {
+    const h = Number(hours || 0);
+    if (!h || h <= 0) return null;
+    return amount / h;
+  };
+
+  const stipendioHourly = calcHourly(state.entrate.stipendio.netto || 0, state.entrate.stipendio.hours || 0);
+
+  // Build hourly data list for chart (only entries with valid hours)
+  const hourlyData = [];
+  if (stipendioHourly !== null) hourlyData.push({ name: title || 'Stipendio', hourly: Number(stipendioHourly.toFixed(2)) });
+  (state.entrate.altreEntrate || []).forEach(entry => {
+    const amount = entry.importo !== undefined ? Number(entry.importo) : Number(entry.value || 0);
+    const h = Number(entry.hours || 0);
+    if (h && h > 0) {
+      const hourly = calcHourly(amount, h);
+      hourlyData.push({ name: entry.titolo || entry.title || 'Voce', hourly: Number((hourly || 0).toFixed(2)) });
+    }
+  });
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
       {/* Totale entrate */}
@@ -101,6 +123,8 @@ const Stipendio = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <input type="number" value={editHours} onChange={e => setEditHours(Number(e.target.value))} style={{ width: 96, height: 44, lineHeight: '44px', padding: '0 13px', boxSizing: 'border-box', borderRadius: 18, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', background: 'var(--bg-light)', fontFamily: 'Roboto Mono, monospace', fontSize: 20, WebkitAppearance: 'none', MozAppearance: 'textfield' }} />
                   </div>
+                  {/* hourly pay display */}
+                  <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-muted)' }}>{stipendioHourly !== null ? (`Paga oraria: ${stipendioHourly.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`) : 'Paga oraria: -'}</div>
               </div>
             )}
           />
@@ -121,6 +145,8 @@ const Stipendio = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
             <div style={{ fontSize: 16, color: 'var(--text-light)', fontFamily: 'Montserrat, sans-serif', fontWeight: 700 }}>Time / h</div>
                   <input type="number" value={entry.hours || ''} onChange={e => handleUpdateEntry({ ...entry, hours: Number(e.target.value || 0) })} style={{ width: 96, height: 40, lineHeight: '40px', padding: '0 13px', boxSizing: 'border-box', borderRadius: 18, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', background: 'var(--bg-light)', fontFamily: 'Roboto Mono, monospace', fontSize: 20, WebkitAppearance: 'none', MozAppearance: 'textfield' }} />
+                  {/* hourly pay for this entry */}
+                  <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-muted)' }}>{(entry.hours && entry.hours > 0) ? (`Paga oraria: ${( (entry.importo !== undefined ? Number(entry.importo) : Number(entry.value || 0)) / Number(entry.hours) ).toLocaleString('it-IT',{ minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`) : 'Paga oraria: -'}</div>
                 </div>
               )}
             />
@@ -191,6 +217,24 @@ const Stipendio = () => {
               <button onClick={() => setShowAddModal(false)} style={{ background: 'var(--bg-medium)', color: 'var(--bg-light)', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 'bold', fontSize: 16, cursor: 'pointer' }}>Annulla</button>
               <button onClick={handleAddEntry} style={{ background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 'bold', fontSize: 16, cursor: 'pointer' }}>Aggiungi</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hourly pay horizontal bar chart */}
+      {hourlyData && hourlyData.length > 0 && (
+        <div style={{ width: '100%', maxWidth: 900, margin: '12px auto', padding: 12, background: 'var(--bg-medium)', borderRadius: 12 }}>
+          <h3 style={{ color: 'var(--bg-light)', margin: '6px 0 12px' }}>Paga oraria per voce</h3>
+          <div style={{ width: '100%', height: Math.min(300, 60 * hourlyData.length) }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart layout="vertical" data={hourlyData} margin={{ top: 8, right: 24, left: 8, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                <XAxis type="number" tickFormatter={(v) => `${v} €`} tick={{ fill: 'var(--text-muted)' }} />
+                <YAxis type="category" dataKey="name" width={160} tick={{ fill: 'var(--text-muted)' }} />
+                <Tooltip formatter={(val) => `${Number(val).toLocaleString('it-IT',{ minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`} />
+                <Bar dataKey="hourly" fill="#06d2fa" radius={[4, 4, 4, 4]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       )}
