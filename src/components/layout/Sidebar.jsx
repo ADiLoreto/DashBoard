@@ -8,7 +8,7 @@ const tabs = [
   'Liquidità',
   'Uscite',
   'Progetti Extra',
-  'Libertà Giorni'
+  'Obiettivi'
 ];
 
 const Sidebar = ({ onSelect, selected, onBack }) => {

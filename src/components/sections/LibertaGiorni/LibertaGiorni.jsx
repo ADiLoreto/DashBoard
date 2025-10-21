@@ -51,7 +51,7 @@ const LibertaGiorni = () => {
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
-      <h2 style={{ color: 'var(--bg-light)' }}>Libertà Giorni — Obiettivi</h2>
+      <h2 style={{ color: 'var(--bg-light)' }}> Obiettivi</h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <label style={{ color: 'var(--text-muted)' }}>
           Entrate mensili obiettivo
