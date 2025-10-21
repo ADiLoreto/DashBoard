@@ -473,7 +473,7 @@ const Dashboard = (props) => {
       <div style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'center' }}>
 
         {/* left donut + goal-bar (stacked visual) */}
-  <div className="donut-item" style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', width: 140 }}>
+  <div className="donut-item" style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', width: 140, transform: `translateX(var(--donut-left-offset, 8px))` }}>
           <div className="donut-card" role="presentation" aria-hidden style={{ width: 140, height: 140 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -487,10 +487,12 @@ const Dashboard = (props) => {
           </div>
 
           {/* goal/comparison bar: current (green/red) vs goal (grey) */}
-          <div style={{ width: 120, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {renderGoalBar(netEntrateValue, Number(userSettings?.monthlyIncomeGoal ?? userSettings?.entrateObiettivo ?? 0), netEntrateValue >= 0 ? '#27ae60' : '#ff6b6b', 96, 40)}
+          <div className="goal-block" style={{ marginTop: 'var(--goal-block-offset, 18px)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            <div className="goal-wrapper" style={{ width: 120, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {renderGoalBar(netEntrateValue, Number(userSettings?.monthlyIncomeGoal ?? userSettings?.entrateObiettivo ?? 0), netEntrateValue >= 0 ? '#27ae60' : '#ff6b6b', 96, 40)}
+            </div>
+            <div className="goal-label" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Entrate vs obiettivo</div>
           </div>
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 6 }}>Entrate vs obiettivo</div>
         </div>
 
   {/* center gray box that contains title + chart */}
@@ -528,8 +530,8 @@ const Dashboard = (props) => {
           </div>
         </div>
 
-        {/* right donut + goal-bar (stacked visual) */}
-  <div className="donut-item" style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', width: 140 }}>
+    {/* right donut + goal-bar (stacked visual) */}
+  <div className="donut-item" style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', width: 140, transform: `translateX(var(--donut-right-offset, -8px))` }}>
           <div className="donut-card" role="presentation" aria-hidden style={{ width: 140, height: 140 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -543,10 +545,12 @@ const Dashboard = (props) => {
           </div>
 
           {/* goal/comparison bar: patrimonio attuale (blue) vs patrimonio obiettivo (grey) */}
-          <div style={{ width: 120, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {renderGoalBar(totaleWealth, Number(userSettings?.patrimonioGoal ?? userSettings?.patrimonioObiettivo ?? 0), '#06d2fa', 96, 40)}
+          <div className="goal-block" style={{ marginTop: 'var(--goal-block-offset, 18px)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            <div className="goal-wrapper" style={{ width: 120, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {renderGoalBar(totaleWealth, Number(userSettings?.patrimonioGoal ?? userSettings?.patrimonioObiettivo ?? 0), '#06d2fa', 96, 40)}
+            </div>
+            <div className="goal-label" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Patrimonio vs obiettivo</div>
           </div>
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 6 }}>Patrimonio vs obiettivo</div>
         </div>
 
       </div>

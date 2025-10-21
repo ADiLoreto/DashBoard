@@ -327,3 +327,40 @@ body {
   :root { --donut-vertical-offset: 8px; }
 }
 
+/* vertical offset for goal block under each donut; tweak to move whole candle+label down/up */
+:root {
+  --goal-block-offset: 18px; /* aumenta per spostare più giù, diminuisci per su */
+  --goal-label-offset: 8px; /* distanza aggiuntiva per la label sotto la candela */
+  --donut-right-offset: -40px; /* sposta il donut destro verso sinistra di default */
+  --donut-left-offset: 50px; /* sposta il donut sinistro verso destra di default */
+}
+
+.goal-block {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.goal-block .goal-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 120px;
+  box-sizing: border-box;
+}
+
+.goal-block .goal-label {
+  text-align: center;
+  color: var(--text-muted);
+  margin-top: var(--goal-label-offset, 6px);
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  :root { --goal-block-offset: 10px; }
+  .goal-block .goal-wrapper { width: 96px; height: 96px; }
+}
+
