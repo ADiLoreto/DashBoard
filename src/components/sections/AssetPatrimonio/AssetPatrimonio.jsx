@@ -89,6 +89,8 @@ const AssetPatrimonio = () => {
   const [editingConto, setEditingConto] = useState(null);
 
   const conti = (state.patrimonio && state.patrimonio.contiDeposito) || [];
+  // Immobili (ex contiDepositoExtra) — sezione per valori immobiliari
+  const immobili = (state.patrimonio && state.patrimonio.immobili) || [];
 
   const buoni = (state.patrimonio && state.patrimonio.buoniTitoli) || [];
   const azioni = (state.patrimonio && state.patrimonio.investimenti && state.patrimonio.investimenti.azioni) || [];
@@ -128,12 +130,19 @@ const AssetPatrimonio = () => {
   const [newOro, setNewOro] = useState({ titolo: '', valore: '' });
   const [editingOro, setEditingOro] = useState(null);
 
+  // Immobili state
+  const [showAddImmobile, setShowAddImmobile] = useState(false);
+  const [showEditImmobile, setShowEditImmobile] = useState(false);
+  const [newImmobile, setNewImmobile] = useState({ titolo: '', valore: '' });
+  const [editingImmobile, setEditingImmobile] = useState(null);
+
   // global Escape key handler: when any "add" modal is open, ESC cancels it
   React.useEffect(() => {
     const onKeyDown = (e) => {
       if (e.key !== 'Escape') return;
       // add modals
       if (showAddModal) { setShowAddModal(false); return; }
+  if (showAddImmobile) { setShowAddImmobile(false); return; }
       if (showAddBuono) { setShowAddBuono(false); return; }
       if (showAddAzione) { setShowAddAzione(false); return; }
       if (showAddEtf) { setShowAddEtf(false); return; }
@@ -142,6 +151,7 @@ const AssetPatrimonio = () => {
 
       // edit modals - treat ESC as Annulla and clear editing state
       if (showEditModal) { setShowEditModal(false); setEditingConto(null); return; }
+  if (showEditImmobile) { setShowEditImmobile(false); setEditingImmobile(null); return; }
       if (showEditBuono) { setShowEditBuono(false); setEditingBuono(null); return; }
       if (showEditAzione) { setShowEditAzione(false); setEditingAzione(null); return; }
       if (showEditEtf) { setShowEditEtf(false); setEditingEtf(null); return; }
@@ -149,10 +159,11 @@ const AssetPatrimonio = () => {
       if (showEditOro) { setShowEditOro(false); setEditingOro(null); return; }
     };
 
-    const anyOpen = showAddModal || showAddBuono || showAddAzione || showAddEtf || showAddCrypto || showAddOro || showEditModal || showEditBuono || showEditAzione || showEditEtf || showEditCrypto || showEditOro;
+  const anyOpen = showAddModal || showAddImmobile || showAddBuono || showAddAzione || showAddEtf || showAddCrypto || showAddOro || showEditModal || showEditImmobile || showEditBuono || showEditAzione || showEditEtf || showEditCrypto || showEditOro;
     if (anyOpen) window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [showAddModal, showAddBuono, showAddAzione, showAddEtf, showAddCrypto, showAddOro, showEditModal, showEditBuono, showEditAzione, showEditEtf, showEditCrypto, showEditOro]);
+  }, [showAddModal, showAddImmobile, showAddBuono, showAddAzione, showAddEtf, showAddCrypto, showAddOro, showEditModal, showEditImmobile, showEditBuono, showEditAzione, showEditEtf, showEditCrypto, showEditOro]);
+
 
   const handleAddConto = () => {
     if (!newConto.titolo) return;
@@ -165,6 +176,18 @@ const AssetPatrimonio = () => {
   const openEditConto = (c) => { setEditingConto({ ...c }); setShowEditModal(true); };
   const handleUpdateConto = () => { dispatch({ type: 'UPDATE_PATRIMONIO_CONTO', payload: editingConto }); setShowEditModal(false); setEditingConto(null); };
   const handleDeleteConto = (id) => { dispatch({ type: 'DELETE_PATRIMONIO_CONTO', payload: { id } }); setShowEditModal(false); setEditingConto(null); };
+
+  // Immobili handlers (prima conti_extra)
+  const openEditImmobile = (m) => { setEditingImmobile({ ...m }); setShowEditImmobile(true); };
+  const handleAddImmobile = () => {
+    if (!newImmobile.titolo) return;
+    const id = Math.random().toString(36).slice(2,9);
+    dispatch({ type: 'ADD_PATRIMONIO_IMMOBILE', payload: { id, titolo: newImmobile.titolo, valore: Number(newImmobile.valore || 0) } });
+    setNewImmobile({ titolo: '', valore: '' });
+    setShowAddImmobile(false);
+  };
+  const handleUpdateImmobile = () => { dispatch({ type: 'UPDATE_PATRIMONIO_IMMOBILE', payload: editingImmobile }); setShowEditImmobile(false); setEditingImmobile(null); };
+  const handleDeleteImmobile = (id) => { dispatch({ type: 'DELETE_PATRIMONIO_IMMOBILE', payload: { id } }); setShowEditImmobile(false); setEditingImmobile(null); };
 
   // Buoni handlers
   const openEditBuono = (b) => { setEditingBuono({ ...b }); setShowEditBuono(true); };
@@ -331,6 +354,63 @@ const AssetPatrimonio = () => {
                       />
                     ))}
                     <div className="big-tab add-tab" onClick={() => setShowAddBuono(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
+                      <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Immobili (nuova sezione) */}
+          {(() => {
+            const key = 'immobili';
+            const open = isCardOpen(key);
+            return (
+              <div
+                onMouseEnter={() => setHoveredCard(key)}
+                onMouseLeave={() => setHoveredCard(null)}
+                style={{
+                  background: 'var(--bg-medium)',
+                  borderRadius: 12,
+                  padding: 16,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                  minWidth: 0,
+                  minHeight: open ? 320 : undefined,
+                  aspectRatio: open ? undefined : '1 / 1',
+                  transition: 'min-height 220ms ease, aspect-ratio 220ms ease'
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                  <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                    <h3 onClick={() => toggleCard(key)} style={{ color: 'var(--bg-light)', margin: 0, cursor: 'pointer', textAlign: 'center', fontSize: 22, fontWeight: 700 }}>Immobili</h3>
+                    <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6, textAlign: 'center', fontSize: 20 }}>{formatCurrency(immobili.reduce((s,i)=>s+Number(i.valore||0),0), currency)}</div>
+                  </div>
+                  <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 12 }}>
+                    <DonutChart items={immobili} getValue={i => Number(i.valore || 0)} size={180} responsive={true} offsetX={-5} offsetY={-5} />
+                  </div>
+                </div>
+
+                {/* entries - only visible when open */}
+                <div style={{ marginTop: 12, display: open ? 'flex' : 'none', flexDirection: 'column', gap: 12, overflowY: 'auto', paddingBottom: 8 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start', justifyContent: 'center' }}>
+                    {immobili.map(i => (
+                        <BigTab
+                        key={i.id}
+                        title={i.titolo || i.name || 'Immobile'}
+                        value={i.valore}
+                        titleStyle={{ fontSize: 22 }}
+                        valueStyle={{ fontSize: 20, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
+                        onUpdate={update => {
+                          if (update.title !== undefined) dispatch({ type: 'UPDATE_PATRIMONIO_IMMOBILE', payload: { ...i, titolo: update.title } });
+                          if (update.value !== undefined) dispatch({ type: 'UPDATE_PATRIMONIO_IMMOBILE', payload: { ...i, valore: Number(update.value) } });
+                        }}
+                        onDelete={() => handleDeleteImmobile(i.id)}
+                      />
+                    ))}
+                    <div className="big-tab add-tab" onClick={() => setShowAddImmobile(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -528,6 +608,37 @@ const AssetPatrimonio = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
                 <button onClick={()=>setShowAddModal(false)} style={{ background: 'var(--bg-medium)', color: 'var(--bg-light)', border: 'none', borderRadius: 8, padding: '10px 24px' }}>Annulla</button>
                 <button onClick={handleAddConto} style={{ background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', borderRadius: 8, padding: '10px 24px' }}>Aggiungi</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Immobili Add/Edit modals */}
+        {showAddImmobile && (
+          <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(48, 57, 67, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ background: 'var(--bg-light)', padding: 32, borderRadius: 16, minWidth: 420, boxShadow: '0 8px 48px rgba(0,0,0,0.35)' }}>
+              <h2 style={{ color: 'var(--bg-dark)', marginBottom: 16, fontSize: 28 }}>Nuovo Immobile</h2>
+              <input type="text" placeholder="Nome immobile" value={newImmobile.titolo} onChange={e=>setNewImmobile(n=>({ ...n, titolo: e.target.value }))} style={{ width: '100%', marginBottom: 12, padding: '12px', fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }} />
+              <input type="number" placeholder="Valore (€)" value={newImmobile.valore} onChange={e=>setNewImmobile(n=>({ ...n, valore: e.target.value }))} style={{ width: '100%', marginBottom: 12, padding: '12px', fontSize: 18, borderRadius: 8, border: '1px solid var(--bg-medium)' }} />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+                <button onClick={()=>setShowAddImmobile(false)} style={{ background: 'var(--bg-medium)', color: 'var(--bg-light)', border: 'none', borderRadius: 8, padding: '10px 24px' }}>Annulla</button>
+                <button onClick={handleAddImmobile} style={{ background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', borderRadius: 8, padding: '10px 24px' }}>Aggiungi</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {showEditImmobile && editingImmobile && (
+          <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(48, 57, 67, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ background: 'var(--bg-light)', padding: 28, borderRadius: 12, minWidth: 420 }}>
+              <h3>Modifica Immobile</h3>
+              <input value={editingImmobile.titolo || ''} onChange={e=>setEditingImmobile(prev=>({ ...prev, titolo: e.target.value }))} style={{ width: '100%', padding: 10, marginBottom: 8 }} />
+              <input type="number" value={editingImmobile.valore || 0} onChange={e=>setEditingImmobile(prev=>({ ...prev, valore: Number(e.target.value) }))} style={{ width: '100%', padding: 10, marginBottom: 12 }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                <button onClick={()=>handleDeleteImmobile(editingImmobile.id)} style={{ padding: '8px 12px', background: '#ff6b6b', color: 'white' }}>Elimina</button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={()=>setShowEditImmobile(false)} style={{ padding: '8px 12px' }}>Annulla</button>
+                  <button onClick={handleUpdateImmobile} style={{ padding: '8px 12px', background: 'var(--accent-cyan)', color: 'var(--bg-dark)' }}>Salva</button>
+                </div>
               </div>
             </div>
           </div>

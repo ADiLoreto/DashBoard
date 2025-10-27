@@ -34,6 +34,13 @@ const financeReducer = (state, action) => {
     case 'DELETE_PATRIMONIO_CONTO':
       return { ...state, patrimonio: { ...state.patrimonio, contiDeposito: (state.patrimonio.contiDeposito || []).filter(c => c.id !== action.payload.id) } };
 
+    case 'ADD_PATRIMONIO_IMMOBILE':
+      return { ...state, patrimonio: { ...state.patrimonio, immobili: [ ...(state.patrimonio.immobili || []), action.payload ] } };
+    case 'UPDATE_PATRIMONIO_IMMOBILE':
+      return { ...state, patrimonio: { ...state.patrimonio, immobili: (state.patrimonio.immobili || []).map(i => i.id === action.payload.id ? { ...i, ...action.payload } : i) } };
+    case 'DELETE_PATRIMONIO_IMMOBILE':
+      return { ...state, patrimonio: { ...state.patrimonio, immobili: (state.patrimonio.immobili || []).filter(i => i.id !== action.payload.id) } };
+
     case 'ADD_INVESTIMENTO_AZIONE':
       return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, azioni: [ ...(state.patrimonio.investimenti.azioni || []), action.payload ] } } };
     case 'UPDATE_INVESTIMENTO_AZIONE':
@@ -131,6 +138,14 @@ export const FinanceProvider = ({ children }) => {
     // ensure liquidita exists and canonical fields are present
     s.liquidita = s.liquidita || {};
 
+    // ensure patrimonio exists and canonical arrays are present
+    s.patrimonio = s.patrimonio || {};
+    if (!Array.isArray(s.patrimonio.immobili)) {
+      // try to fallback from older keys if present
+      if (Array.isArray(s.patrimonio?.contiExtra)) s.patrimonio.immobili = s.patrimonio.contiExtra;
+      else s.patrimonio.immobili = [];
+    }
+
     // contiCorrenti: prefer contiCorrenti, fallback to liquidita.conti or patrimonio.contiDeposito
     if (!Array.isArray(s.liquidita.contiCorrenti)) {
       if (Array.isArray(s.liquidita.conti)) s.liquidita.contiCorrenti = s.liquidita.conti;
@@ -159,6 +174,10 @@ export const FinanceProvider = ({ children }) => {
       saldo: Number(c?.saldo ?? c?.importo ?? 0)
     }));
     s.liquidita.contante = Number(s.liquidita.contante || 0);
+
+    // normalize patrimonio arrays
+    s.patrimonio.contiDeposito = (s.patrimonio.contiDeposito || []).map(c => ({ ...c, saldo: Number(c?.saldo ?? c?.importo ?? 0) }));
+    s.patrimonio.immobili = (s.patrimonio.immobili || []).map(i => ({ ...i, valore: Number(i?.valore ?? i?.saldo ?? 0) }));
 
     return s;
   };
