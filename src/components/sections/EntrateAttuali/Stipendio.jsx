@@ -1,6 +1,8 @@
 import React, { useContext, useState } from 'react';
 import BigTab from '../../ui/BigTab';
+import CashflowForm from '../../wizard/forms/CashflowForm';
 import { FinanceContext } from '../../../context/FinanceContext';
+import { formatDate } from '../../../utils/format';
 import { z } from 'zod';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LabelList } from 'recharts';
 
@@ -12,6 +14,30 @@ const stipendioSchema = z.object({
 
 const Stipendio = () => {
   const { state, dispatch } = useContext(FinanceContext);
+
+  // generated cashflows editing
+  const [editingGenerated, setEditingGenerated] = useState(null);
+
+  const handleEditGenerated = (entry) => {
+    // normalize generated entry to CashflowForm model shape
+    const model = {
+      id: entry.id,
+      type: entry.type || 'entrata',
+      titolo: entry.titolo || entry.title || '',
+      amount: entry.amount !== undefined ? entry.amount : entry.importo || 0,
+      frequency: entry.frequency || 'monthly',
+      startDate: entry.date || entry.startDate || new Date().toISOString().slice(0,10),
+      autoGenerate: !!entry.autoGenerate,
+      meta: { assetId: entry.sourceAssetId || entry.meta?.assetId, assetTipo: entry.sourceAssetTipo || entry.meta?.assetTipo }
+    };
+    setEditingGenerated(model);
+  };
+
+  const handleSaveGenerated = (updated) => {
+    // dispatch an action to update generated cashflow (and sync to asset if reducer handles it)
+    dispatch({ type: 'UPDATE_CASHFLOW_ASSET', payload: { ...updated, importo: updated.amount, date: updated.startDate, meta: updated.meta } });
+    setEditingGenerated(null);
+  };
 
   const handleSave = (data) => {
     try {
@@ -190,6 +216,50 @@ const Stipendio = () => {
             />
           </div>
         ))}
+        {/* Read-only list: generated cashflows from assets */}
+        {(state.entrate.cashflowAsset || []).length > 0 && (
+          <div style={{ width: '100%', marginTop: 12 }}>
+            <h3 style={{ color: 'var(--bg-dark)', marginBottom: 8 }}>Entrate automatiche da Asset</h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'flex-start' }}>
+              {(state.entrate.cashflowAsset || []).map(cf => (
+                <BigTab
+                  key={cf.id}
+                  title={cf.titolo || cf.title || '(senza titolo)'}
+                  value={cf.amount || cf.importo || 0}
+                  titleStyle={{ fontSize: 20 }}
+                  valueStyle={{ fontSize: 20, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
+                  onUpdate={null} // read-only
+                  footer={
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                      <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
+                        {cf.frequency || cf.freq || '—'} · {formatDate(cf.date || cf.startDate)}
+                      </div>
+                      {((cf.sourceAssetTipo || cf.meta?.assetTipo) && (cf.sourceAssetId || cf.meta?.assetId)) && (
+                        <div style={{ fontSize: 13, color: 'var(--text-light)' }}>
+                          {cf.sourceAssetTipo || cf.meta?.assetTipo || ''} · {cf.sourceAssetId || cf.meta?.assetId}
+                        </div>
+                      )}
+                      <button 
+                        onClick={() => handleEditGenerated(cf)}
+                        style={{ 
+                          marginTop: 4,
+                          padding: '6px 16px',
+                          background: 'var(--bg-medium)',
+                          border: 'none',
+                          borderRadius: 16,
+                          color: 'var(--text-light)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Modifica
+                      </button>
+                    </div>
+                  }
+                />
+              ))}
+            </div>
+          </div>
+        )}
   <div
           className="big-tab add-tab"
           style={{
@@ -345,6 +415,11 @@ const Stipendio = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* CashflowForm modal for editing generated cashflows */}
+      {editingGenerated && (
+        <CashflowForm show={true} initial={editingGenerated} onClose={() => setEditingGenerated(null)} onSave={handleSaveGenerated} />
       )}
     </div>
   );

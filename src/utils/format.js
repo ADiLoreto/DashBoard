@@ -15,3 +15,13 @@ export const getUserCurrency = (username) => {
     return obj.currency || 'EUR';
   } catch { return 'EUR'; }
 };
+
+export const formatDate = (isoDate) => {
+  if (!isoDate) return '';
+  try {
+    // Take only YYYY-MM-DD part
+    return isoDate.split('T')[0];
+  } catch (e) {
+    return isoDate;
+  }
+};

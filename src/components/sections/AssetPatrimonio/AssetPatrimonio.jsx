@@ -4,6 +4,7 @@ import { formatCurrency, getUserCurrency } from '../../../utils/format';
 import { AuthContext } from '../../../context/AuthContext';
 import { FinanceContext } from '../../../context/FinanceContext';
 import BigTab from '../../ui/BigTab';
+import AssetWizard from '../../wizard/AssetWizard';
 import { PieChart, Pie, Cell } from 'recharts';
 
 // animated inline SVG donut chart: items (array), getValue(item) -> number
@@ -130,6 +131,11 @@ const AssetPatrimonio = () => {
   const [newOro, setNewOro] = useState({ titolo: '', valore: '' });
   const [editingOro, setEditingOro] = useState(null);
 
+  // Wizard integration state (FASE 3.1)
+  const [showWizard, setShowWizard] = useState(false);
+  const [wizardAsset, setWizardAsset] = useState(null);
+  const [wizardAssetType, setWizardAssetType] = useState(null);
+
   // Immobili state
   const [showAddImmobile, setShowAddImmobile] = useState(false);
   const [showEditImmobile, setShowEditImmobile] = useState(false);
@@ -149,6 +155,9 @@ const AssetPatrimonio = () => {
       if (showAddCrypto) { setShowAddCrypto(false); return; }
       if (showAddOro) { setShowAddOro(false); return; }
 
+  // wizard - close and clear
+  if (showWizard) { setShowWizard(false); setWizardAsset(null); setWizardAssetType(null); return; }
+
       // edit modals - treat ESC as Annulla and clear editing state
       if (showEditModal) { setShowEditModal(false); setEditingConto(null); return; }
   if (showEditImmobile) { setShowEditImmobile(false); setEditingImmobile(null); return; }
@@ -159,10 +168,10 @@ const AssetPatrimonio = () => {
       if (showEditOro) { setShowEditOro(false); setEditingOro(null); return; }
     };
 
-  const anyOpen = showAddModal || showAddImmobile || showAddBuono || showAddAzione || showAddEtf || showAddCrypto || showAddOro || showEditModal || showEditImmobile || showEditBuono || showEditAzione || showEditEtf || showEditCrypto || showEditOro;
+  const anyOpen = showAddModal || showAddImmobile || showAddBuono || showAddAzione || showAddEtf || showAddCrypto || showAddOro || showWizard || showEditModal || showEditImmobile || showEditBuono || showEditAzione || showEditEtf || showEditCrypto || showEditOro;
     if (anyOpen) window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [showAddModal, showAddImmobile, showAddBuono, showAddAzione, showAddEtf, showAddCrypto, showAddOro, showEditModal, showEditImmobile, showEditBuono, showEditAzione, showEditEtf, showEditCrypto, showEditOro]);
+  }, [showAddModal, showAddImmobile, showAddBuono, showAddAzione, showAddEtf, showAddCrypto, showAddOro, showWizard, showEditModal, showEditImmobile, showEditBuono, showEditAzione, showEditEtf, showEditCrypto, showEditOro]);
 
 
   const handleAddConto = () => {
@@ -244,6 +253,61 @@ const AssetPatrimonio = () => {
   const handleUpdateOro = () => { dispatch({ type: 'UPDATE_ORO', payload: editingOro }); setShowEditOro(false); setEditingOro(null); };
   const handleDeleteOro = (id) => { dispatch({ type: 'DELETE_ORO', payload: { id } }); setShowEditOro(false); setEditingOro(null); };
 
+  // Wizard handlers: open wizard for create/edit and save callback (FASE 3.1 / 3.2)
+  const handleAddAsset = (assetType) => {
+    setWizardAssetType(assetType);
+    setWizardAsset(null);
+    setShowWizard(true);
+  };
+
+  const handleEditAsset = (asset, assetType) => {
+    setWizardAssetType(assetType);
+    setWizardAsset(asset);
+    setShowWizard(true);
+  };
+
+  const handleSaveFromWizard = (assetData) => {
+    // assetData should contain { id?, titolo, valore, ... } and the wizardAssetType indicates target section
+    const type = wizardAssetType;
+    if (!type) { setShowWizard(false); return; }
+
+    // Map section keys to reducer action types
+    const mapAdd = {
+      conti: 'ADD_PATRIMONIO_CONTO',
+      immobili: 'ADD_PATRIMONIO_IMMOBILE',
+      buoni: 'ADD_BUONO_TITOLO',
+      azioni: 'ADD_INVESTIMENTO_AZIONE',
+      etf: 'ADD_INVESTIMENTO_ETF',
+      crypto: 'ADD_INVESTIMENTO_CRYPTO',
+      oro: 'ADD_ORO'
+    };
+    const mapUpdate = {
+      conti: 'UPDATE_PATRIMONIO_CONTO',
+      immobili: 'UPDATE_PATRIMONIO_IMMOBILE',
+      buoni: 'UPDATE_BUONO_TITOLO',
+      azioni: 'UPDATE_INVESTIMENTO_AZIONE',
+      etf: 'UPDATE_INVESTIMENTO_ETF',
+      crypto: 'UPDATE_INVESTIMENTO_CRYPTO',
+      oro: 'UPDATE_ORO'
+    };
+
+    if (assetData.id) {
+      const action = mapUpdate[type];
+      if (action) dispatch({ type: action, payload: assetData });
+    } else {
+      // ensure we generate an id for new items
+      const id = Math.random().toString(36).slice(2,9);
+      const payload = { id, ...assetData };
+      const action = mapAdd[type];
+      if (action) dispatch({ type: action, payload });
+    }
+
+    // close and reset
+    setShowWizard(false);
+    setWizardAsset(null);
+    setWizardAssetType(null);
+  };
+
   // Show summary and Conti Deposito subtab
   return (
     <div style={{ margin: '6px 0', display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
@@ -308,7 +372,7 @@ const AssetPatrimonio = () => {
                         onDelete={() => handleDeleteConto(c.id)}
                       />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => setShowAddModal(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
+                    <div className="big-tab add-tab" onClick={() => handleAddAsset('conti')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -353,7 +417,7 @@ const AssetPatrimonio = () => {
                         onDelete={() => handleDeleteBuono(b.id)}
                       />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => setShowAddBuono(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
+                    <div className="big-tab add-tab" onClick={() => handleAddAsset('buoni')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -410,7 +474,7 @@ const AssetPatrimonio = () => {
                         onDelete={() => handleDeleteImmobile(i.id)}
                       />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => setShowAddImmobile(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
+                    <div className="big-tab add-tab" onClick={() => handleAddAsset('immobili')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -455,7 +519,7 @@ const AssetPatrimonio = () => {
                         onDelete={() => handleDeleteAzione(a.id)}
                       />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => setShowAddAzione(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
+                    <div className="big-tab add-tab" onClick={() => handleAddAsset('azioni')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -499,7 +563,7 @@ const AssetPatrimonio = () => {
                         onDelete={() => handleDeleteEtf(e.id)}
                       />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => setShowAddEtf(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
+                    <div className="big-tab add-tab" onClick={() => handleAddAsset('etf')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -543,7 +607,7 @@ const AssetPatrimonio = () => {
                         onDelete={() => handleDeleteCrypto(c.id)}
                       />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => setShowAddCrypto(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
+                    <div className="big-tab add-tab" onClick={() => handleAddAsset('crypto')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -587,7 +651,7 @@ const AssetPatrimonio = () => {
                         onDelete={() => handleDeleteOro(o.id)}
                       />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => setShowAddOro(true)} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
+                    <div className="big-tab add-tab" onClick={() => handleAddAsset('oro')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -597,6 +661,17 @@ const AssetPatrimonio = () => {
           })()}
 
         </div>
+
+        {/* Asset wizard (opens for add/edit asset) */}
+        {showWizard && (
+          <AssetWizard
+            show={showWizard}
+            asset={wizardAsset}
+            assetType={wizardAssetType}
+            onClose={() => { setShowWizard(false); setWizardAsset(null); setWizardAssetType(null); }}
+            onSave={(data) => handleSaveFromWizard(data)}
+          />
+        )}
 
         {/* Add modal */}
         {showAddModal && (

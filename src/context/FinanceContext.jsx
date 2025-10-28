@@ -3,6 +3,53 @@ import { initialState } from '../config/constants';
 import { saveState, loadState, loadDraft, saveDraft, clearDraft } from '../utils/storage';
 import { AuthContext } from './AuthContext';
 
+// Utility: calculate next generation date given frequency
+const calculateNextDate = (currentIso, frequency) => {
+  if (!currentIso) return null;
+  const d = new Date(currentIso);
+  if (Number.isNaN(d.getTime())) return null;
+  switch (frequency) {
+    case 'monthly': d.setMonth(d.getMonth() + 1); break;
+    case 'quarterly': d.setMonth(d.getMonth() + 3); break;
+    case 'semiannually': d.setMonth(d.getMonth() + 6); break;
+    case 'yearly': d.setFullYear(d.getFullYear() + 1); break;
+    case 'once': return null;
+    default: d.setMonth(d.getMonth() + 1); break;
+  }
+  return d.toISOString();
+};
+
+// Helper: update an asset inside patrimonio by type
+const updateAssetInPatrimonio = (state, assetType, asset) => {
+  const s = { ...state };
+  switch (assetType) {
+    case 'conti':
+      s.patrimonio = { ...s.patrimonio, contiDeposito: (s.patrimonio.contiDeposito || []).map(a => a.id === asset.id ? { ...a, ...asset } : a) };
+      break;
+    case 'immobili':
+      s.patrimonio = { ...s.patrimonio, immobili: (s.patrimonio.immobili || []).map(a => a.id === asset.id ? { ...a, ...asset } : a) };
+      break;
+    case 'buoni':
+      s.patrimonio = { ...s.patrimonio, buoniTitoli: (s.patrimonio.buoniTitoli || []).map(a => a.id === asset.id ? { ...a, ...asset } : a) };
+      break;
+    case 'azioni':
+      s.patrimonio = { ...s.patrimonio, investimenti: { ...s.patrimonio.investimenti, azioni: (s.patrimonio.investimenti.azioni || []).map(a => a.id === asset.id ? { ...a, ...asset } : a) } };
+      break;
+    case 'etf':
+      s.patrimonio = { ...s.patrimonio, investimenti: { ...s.patrimonio.investimenti, etf: (s.patrimonio.investimenti.etf || []).map(a => a.id === asset.id ? { ...a, ...asset } : a) } };
+      break;
+    case 'crypto':
+      s.patrimonio = { ...s.patrimonio, investimenti: { ...s.patrimonio.investimenti, crypto: (s.patrimonio.investimenti.crypto || []).map(a => a.id === asset.id ? { ...a, ...asset } : a) } };
+      break;
+    case 'oro':
+      s.patrimonio = { ...s.patrimonio, investimenti: { ...s.patrimonio.investimenti, oro: (s.patrimonio.investimenti.oro || []).map(a => a.id === asset.id ? { ...a, ...asset } : a) } };
+      break;
+    default:
+      break;
+  }
+  return s;
+};
+
 export const FinanceContext = createContext();
 
 const financeReducer = (state, action) => {
@@ -111,6 +158,154 @@ const financeReducer = (state, action) => {
       return { ...state, uscite: { ...state.uscite, variabili: (state.uscite.variabili || []).map(u => u.id === action.payload.id ? { ...u, ...action.payload } : u) } };
     case 'DELETE_USCITA_VARIABILE':
       return { ...state, uscite: { ...state.uscite, variabili: (state.uscite.variabili || []).filter(u => u.id !== action.payload.id) } };
+    
+    case 'UPDATE_ASSET_WITH_CASHFLOWS': {
+      // payload: { assetType, asset }
+      const { assetType, asset } = action.payload || {};
+      if (!assetType || !asset) return state;
+      return updateAssetInPatrimonio(state, assetType, asset);
+    }
+
+    case 'GENERATE_CASHFLOWS_FROM_ASSETS': {
+      // scan patrimonio, find asset.cashflows with autoGenerate true and nextGeneration <= now
+      const now = new Date();
+      const s = JSON.parse(JSON.stringify(state)); // deep clone to mutate safely
+      const generated = [];
+
+      const processAsset = (asset, assetType) => {
+        if (!asset || !Array.isArray(asset.cashflows)) return;
+        asset.cashflows = asset.cashflows.map(cf => {
+          try {
+            if (cf.autoGenerate && cf.nextGeneration) {
+              const next = new Date(cf.nextGeneration);
+              if (!isNaN(next.getTime()) && next <= now) {
+                // create generated entry
+                const gen = {
+                  id: Math.random().toString(36).slice(2,9),
+                  sourceAssetId: asset.id,
+                  sourceAssetTipo: assetType,
+                  titolo: cf.titolo || (`${asset.titolo || asset.name} - ${cf.titolo || 'cashflow'}`),
+                  amount: Number(cf.amount || 0),
+                  date: cf.nextGeneration,
+                  type: cf.type || 'entrata'
+                };
+                generated.push(gen);
+                // advance nextGeneration
+                cf.nextGeneration = calculateNextDate(cf.nextGeneration, cf.frequency);
+              }
+            }
+          } catch (e) {
+            // ignore
+          }
+          return cf;
+        });
+      };
+
+      // contiDeposito
+      (s.patrimonio.contiDeposito || []).forEach(a => processAsset(a, 'conti'));
+      (s.patrimonio.immobili || []).forEach(a => processAsset(a, 'immobili'));
+      (s.patrimonio.buoniTitoli || []).forEach(a => processAsset(a, 'buoni'));
+      const inv = s.patrimonio.investimenti || {};
+      (inv.azioni || []).forEach(a => processAsset(a, 'azioni'));
+      (inv.etf || []).forEach(a => processAsset(a, 'etf'));
+      (inv.crypto || []).forEach(a => processAsset(a, 'crypto'));
+      (inv.oro || []).forEach(a => processAsset(a, 'oro'));
+
+      // append generated entries to entrate or uscite arrays
+      generated.forEach(g => {
+        if (g.type === 'entrata') s.entrate.cashflowAsset = [ ...(s.entrate.cashflowAsset || []), g ];
+        else s.uscite.cashflowAsset = [ ...(s.uscite.cashflowAsset || []), g ];
+      });
+
+      return s;
+    }
+    case 'UPDATE_CASHFLOW_ASSET': {
+      // payload: updated generated cashflow entry
+      const updated = action.payload || {};
+      const id = updated.id;
+
+      // shallow clone state parts we will modify
+      const s = JSON.parse(JSON.stringify(state));
+
+      // update entrate and uscite generated arrays if present
+      s.entrate = s.entrate || {};
+      s.entrate.cashflowAsset = (s.entrate.cashflowAsset || []).map(cf => cf.id === id ? { ...cf, ...updated } : cf);
+      s.uscite = s.uscite || {};
+      s.uscite.cashflowAsset = (s.uscite.cashflowAsset || []).map(cf => cf.id === id ? { ...cf, ...updated } : cf);
+
+      // if the generated entry references an asset, sync the cashflow inside that asset
+      const meta = updated.meta || {};
+      const assetId = meta.assetId || updated.sourceAssetId || null;
+      const assetTipo = (meta.assetTipo || updated.sourceAssetTipo || '') .toString();
+
+      if (assetId && assetTipo) {
+        // prepare updated cashflow fields to merge into asset.cashflows[]
+        const cfId = updated.cashflowId || id;
+        const cfPatch = {
+          titolo: updated.titolo || updated.title,
+          amount: updated.amount !== undefined ? Number(updated.amount) : (updated.importo !== undefined ? Number(updated.importo) : undefined),
+          frequency: updated.frequency,
+          startDate: updated.startDate || updated.date,
+          autoGenerate: updated.autoGenerate
+        };
+
+        // helper to update cashflows array on an asset
+        const updateAssetCashflows = (asset) => {
+          if (!asset) return asset;
+          const patched = (asset.cashflows || []).map(cf => cf.id === cfId ? { ...cf, ...cfPatch } : cf);
+          return { ...asset, cashflows: patched };
+        };
+
+        // map to correct patrimonio section
+        switch (assetTipo) {
+          case 'conti':
+          case 'contiDeposito':
+          case 'conto':
+            s.patrimonio.contiDeposito = (s.patrimonio.contiDeposito || []).map(a => a.id === assetId ? updateAssetCashflows(a) : a);
+            break;
+          case 'immobile':
+          case 'immobili':
+            s.patrimonio.immobili = (s.patrimonio.immobili || []).map(a => a.id === assetId ? updateAssetCashflows(a) : a);
+            break;
+          case 'buono':
+          case 'buoni':
+          case 'buoniTitoli':
+            s.patrimonio.buoniTitoli = (s.patrimonio.buoniTitoli || []).map(a => a.id === assetId ? updateAssetCashflows(a) : a);
+            break;
+          case 'azioni':
+          case 'azione':
+            s.patrimonio.investimenti = s.patrimonio.investimenti || {};
+            s.patrimonio.investimenti.azioni = (s.patrimonio.investimenti.azioni || []).map(a => a.id === assetId ? updateAssetCashflows(a) : a);
+            break;
+          case 'etf':
+            s.patrimonio.investimenti = s.patrimonio.investimenti || {};
+            s.patrimonio.investimenti.etf = (s.patrimonio.investimenti.etf || []).map(a => a.id === assetId ? updateAssetCashflows(a) : a);
+            break;
+          case 'crypto':
+            s.patrimonio.investimenti = s.patrimonio.investimenti || {};
+            s.patrimonio.investimenti.crypto = (s.patrimonio.investimenti.crypto || []).map(a => a.id === assetId ? updateAssetCashflows(a) : a);
+            break;
+          case 'oro':
+            s.patrimonio.investimenti = s.patrimonio.investimenti || {};
+            s.patrimonio.investimenti.oro = (s.patrimonio.investimenti.oro || []).map(a => a.id === assetId ? updateAssetCashflows(a) : a);
+            break;
+          default:
+            // unknown asset type: attempt to patch across all possible arrays
+            s.patrimonio.contiDeposito = (s.patrimonio.contiDeposito || []).map(a => a.id === assetId ? updateAssetCashflows(a) : a);
+            s.patrimonio.immobili = (s.patrimonio.immobili || []).map(a => a.id === assetId ? updateAssetCashflows(a) : a);
+            s.patrimonio.buoniTitoli = (s.patrimonio.buoniTitoli || []).map(a => a.id === assetId ? updateAssetCashflows(a) : a);
+            if (s.patrimonio.investimenti) {
+              s.patrimonio.investimenti.azioni = (s.patrimonio.investimenti.azioni || []).map(a => a.id === assetId ? updateAssetCashflows(a) : a);
+              s.patrimonio.investimenti.etf = (s.patrimonio.investimenti.etf || []).map(a => a.id === assetId ? updateAssetCashflows(a) : a);
+              s.patrimonio.investimenti.crypto = (s.patrimonio.investimenti.crypto || []).map(a => a.id === assetId ? updateAssetCashflows(a) : a);
+              s.patrimonio.investimenti.oro = (s.patrimonio.investimenti.oro || []).map(a => a.id === assetId ? updateAssetCashflows(a) : a);
+            }
+            break;
+        }
+      }
+
+      return s;
+    }
     case 'ADD_INVESTIMENTO':
       // logica per aggiungere investimento
       return state;
@@ -176,8 +371,21 @@ export const FinanceProvider = ({ children }) => {
     s.liquidita.contante = Number(s.liquidita.contante || 0);
 
     // normalize patrimonio arrays
-    s.patrimonio.contiDeposito = (s.patrimonio.contiDeposito || []).map(c => ({ ...c, saldo: Number(c?.saldo ?? c?.importo ?? 0) }));
-    s.patrimonio.immobili = (s.patrimonio.immobili || []).map(i => ({ ...i, valore: Number(i?.valore ?? i?.saldo ?? 0) }));
+  s.patrimonio.contiDeposito = (s.patrimonio.contiDeposito || []).map(c => ({ ...c, saldo: Number(c?.saldo ?? c?.importo ?? 0), cashflows: c.cashflows || [] }));
+  s.patrimonio.immobili = (s.patrimonio.immobili || []).map(i => ({ ...i, valore: Number(i?.valore ?? i?.saldo ?? 0), cashflows: i.cashflows || [] }));
+  s.patrimonio.buoniTitoli = (s.patrimonio.buoniTitoli || []).map(b => ({ ...b, importo: Number(b?.importo ?? b?.valore ?? 0), cashflows: b.cashflows || [] }));
+  // investments group
+  if (!s.patrimonio.investimenti) s.patrimonio.investimenti = { azioni: [], etf: [], crypto: [], oro: [] };
+  s.patrimonio.investimenti.azioni = (s.patrimonio.investimenti.azioni || []).map(a => ({ ...a, valore: Number(a?.valore ?? a?.importo ?? 0), cashflows: a.cashflows || [] }));
+  s.patrimonio.investimenti.etf = (s.patrimonio.investimenti.etf || []).map(e => ({ ...e, valore: Number(e?.valore ?? e?.importo ?? 0), cashflows: e.cashflows || [] }));
+  s.patrimonio.investimenti.crypto = (s.patrimonio.investimenti.crypto || []).map(c => ({ ...c, valore: Number(c?.valore ?? c?.importo ?? 0), cashflows: c.cashflows || [] }));
+  s.patrimonio.investimenti.oro = (s.patrimonio.investimenti.oro || []).map(o => ({ ...o, valore: Number(o?.valore ?? o?.importo ?? 0), cashflows: o.cashflows || [] }));
+
+  // ensure entrate/uscite cashflow arrays exist
+  s.entrate = s.entrate || {};
+  if (!Array.isArray(s.entrate.cashflowAsset)) s.entrate.cashflowAsset = [];
+  s.uscite = s.uscite || {};
+  if (!Array.isArray(s.uscite.cashflowAsset)) s.uscite.cashflowAsset = [];
 
     return s;
   };

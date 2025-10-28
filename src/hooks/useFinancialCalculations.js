@@ -7,7 +7,8 @@ export const useFinancialCalculations = () => {
   const totaleEntrate = useMemo(() => {
     return state.entrate.stipendio.netto +
            state.entrate.bonus.reduce((sum, b) => sum + b.importo, 0) +
-           state.entrate.altreEntrate.reduce((sum, e) => sum + e.importo, 0);
+           state.entrate.altreEntrate.reduce((sum, e) => sum + e.importo, 0) +
+           (state.entrate.cashflowAsset || []).reduce((sum, cf) => sum + cf.amount, 0);
   }, [state.entrate]);
 
   const totalePatrimonio = useMemo(() => {

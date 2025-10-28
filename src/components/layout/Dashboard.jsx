@@ -9,6 +9,7 @@ import Liquidita from '../sections/Liquidita/Liquidita';
 import ProgettiExtra, { computeTotaleProgetti } from '../sections/ProgettiExtra/ProgettiExtra';
 import LibertaGiorni from '../sections/LibertaGiorni/LibertaGiorni';
 import { useFinancialCalculations } from '../../hooks/useFinancialCalculations';
+import useCashflowGeneration from '../../hooks/useCashflowGeneration';
 import { FinanceContext } from '../../context/FinanceContext';
 import { formatCurrency, getUserCurrency } from '../../utils/format';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Line, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
@@ -92,6 +93,10 @@ const Dashboard = (props) => {
 
   // Calcoli dinamici dai dati nel context
   const { totaleEntrate, totalePatrimonio, totaleLiquidita } = useFinancialCalculations();
+
+  // start background generation of recurring cashflows (runs at mount and every hour)
+  // expose forceGenerate for manual/testing trigger
+  const { forceGenerate } = useCashflowGeneration();
 
   const currency = getUserCurrency(username);
   const totaleProgetti = computeTotaleProgetti(state.progettiExtra || []);
@@ -338,8 +343,19 @@ const Dashboard = (props) => {
 
   return (
     <main style={{ position: 'relative', flex: 1, background: 'var(--bg-dark)', minHeight: '100vh' }}>
-      <div className="topbar">
-        <h1>FINANCIAL STATUS DASHBOARD</h1>
+      <div className="topbar" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <h1 style={{ margin: 0 }}>FINANCIAL STATUS DASHBOARD</h1>
+        {/* DEBUG: manual trigger per test automatic cashflow */}
+        <div style={{ marginLeft: 12 }}>
+          <button
+            type="button"
+            onClick={() => { if (typeof forceGenerate === 'function') forceGenerate(); }}
+            title="Forza generazione cashflow (debug)"
+            style={{ marginLeft: 12, background: 'transparent', color: '#06d2fa', border: '1px solid rgba(6,210,250,0.12)', padding: '6px 10px', borderRadius: 8, cursor: 'pointer' }}
+          >
+            Forza generazione cashflow
+          </button>
+        </div>
         <div className="topbar-dates">
           <div className="date-field">
             <label htmlFor="start-date">Start Date</label>
