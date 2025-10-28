@@ -116,6 +116,8 @@ const Stipendio = () => {
   // Build hourly data list for chart (only entries with valid hours and days)
   const hourlyData = [];
   if (stipendioHourly !== null) hourlyData.push({ name: title || 'Stipendio', hourly: Number(stipendioHourly.toFixed(2)) });
+  
+  // Add manual entries
   (state.entrate.altreEntrate || []).forEach(entry => {
     const amount = entry.importo !== undefined ? Number(entry.importo) : Number(entry.value || 0);
     const h = Number(entry.hours || 0);
@@ -123,6 +125,20 @@ const Stipendio = () => {
     if (h && h > 0 && d && d > 0) {
       const hourly = calcHourly(amount, h, d);
       hourlyData.push({ name: entry.titolo || entry.title || 'Voce', hourly: Number((hourly || 0).toFixed(2)) });
+    }
+  });
+
+  // Add cashflow entries if they have hours/days
+  (state.entrate.cashflowAsset || []).forEach(entry => {
+    const amount = entry.amount || entry.importo || 0;
+    const h = Number(entry.hours || 0);
+    const d = Number(entry.days || 0);
+    if (h && h > 0 && d && d > 0) {
+      const hourly = calcHourly(amount, h, d);
+      hourlyData.push({ 
+        name: (entry.titolo || entry.title || '(senza titolo)') + ' (auto)', 
+        hourly: Number((hourly || 0).toFixed(2)) 
+      });
     }
   });
 
@@ -142,7 +158,7 @@ const Stipendio = () => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 32 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-start', alignItems: 'center', gap: 32 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
           <BigTab
             title={title}
@@ -216,10 +232,35 @@ const Stipendio = () => {
             />
           </div>
         ))}
+        
+        {/* Add new entry button */}
+        <div
+          className="big-tab add-tab"
+          style={{
+            background: 'var(--bg-light)',
+            color: 'var(--text-muted)',
+            border: '2px dashed var(--bg-medium)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: 260,
+            minHeight: 180,
+            borderRadius: 16,
+            cursor: 'pointer',
+            fontSize: 48,
+            transition: 'all 0.2s'
+          }}
+          onClick={() => setShowAddModal(true)}
+        >
+          <span style={{ fontSize: 64, color: 'var(--accent-cyan)' }}>+</span>
+          <div style={{ fontSize: 18, marginTop: 8 }}>Aggiungi nuova voce</div>
+        </div>
+
         {/* Read-only list: generated cashflows from assets */}
         {(state.entrate.cashflowAsset || []).length > 0 && (
-          <div style={{ width: '100%', marginTop: 12 }}>
-            <h3 style={{ color: 'var(--bg-dark)', marginBottom: 8 }}>Entrate automatiche da Asset</h3>
+          <div style={{ width: '100%', marginTop: 32, borderTop: '1px solid var(--bg-medium)', paddingTop: 24 }}>
+            <h3 style={{ color: 'var(--bg-dark)', marginBottom: 16 }}>Entrate automatiche da Asset</h3>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'flex-start' }}>
               {(state.entrate.cashflowAsset || []).map(cf => (
                 <BigTab
@@ -231,7 +272,48 @@ const Stipendio = () => {
                   onUpdate={null} // read-only
                   footer={
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                      <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
+                      {/* Time/h controls */}
+                      <div style={{ fontSize: 16, color: 'var(--text-light)', fontFamily: 'Montserrat, sans-serif', fontWeight: 700 }}>Time / h</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <input
+                          type="number"
+                          value={cf.hours || ''}
+                          onChange={e => {
+                            const val = Number(e.target.value || 0);
+                            handleSaveGenerated({ 
+                              ...cf,
+                              hours: val,
+                              days: cf.days || 0
+                            });
+                          }}
+                          style={{ width: 70, height: 40, lineHeight: '40px', padding: '0 13px', boxSizing: 'border-box', borderRadius: 18, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', background: 'var(--bg-light)', fontFamily: 'Roboto Mono, monospace', fontSize: 20, WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+                        />
+                        <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>ore/giorno</div>
+                        <input
+                          type="number"
+                          value={cf.days || ''}
+                          onChange={e => {
+                            const val = Number(e.target.value || 0);
+                            handleSaveGenerated({ 
+                              ...cf,
+                              hours: cf.hours || 0,
+                              days: val
+                            });
+                          }}
+                          style={{ width: 70, height: 40, lineHeight: '40px', padding: '0 13px', boxSizing: 'border-box', borderRadius: 18, border: '1px solid var(--bg-medium)', textAlign: 'center', fontWeight: 700, color: 'var(--accent-cyan)', background: 'var(--bg-light)', fontFamily: 'Roboto Mono, monospace', fontSize: 20, WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+                        />
+                        <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>giorni/mese</div>
+                      </div>
+
+                      {/* hourly pay for this entry */}
+                      <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-muted)' }}>
+                        {(cf.hours && cf.hours > 0 && cf.days && cf.days > 0) 
+                          ? `Paga oraria: ${((cf.amount || cf.importo || 0) / (Number(cf.hours) * Number(cf.days))).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` 
+                          : 'Paga oraria: -'}
+                      </div>
+
+                      {/* Original info */}
+                      <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>
                         {cf.frequency || cf.freq || '—'} · {formatDate(cf.date || cf.startDate)}
                       </div>
                       {((cf.sourceAssetTipo || cf.meta?.assetTipo) && (cf.sourceAssetId || cf.meta?.assetId)) && (
@@ -260,29 +342,7 @@ const Stipendio = () => {
             </div>
           </div>
         )}
-  <div
-          className="big-tab add-tab"
-          style={{
-            background: 'var(--bg-light)',
-            color: 'var(--text-muted)',
-            border: '2px dashed var(--bg-medium)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minWidth: 260,
-            minHeight: 180,
-            borderRadius: 16,
-            cursor: 'pointer',
-            margin: 24,
-            fontSize: 48,
-            transition: 'all 0.2s'
-          }}
-          onClick={() => setShowAddModal(true)}
-        >
-          <span style={{ fontSize: 64, color: 'var(--accent-cyan)' }}>+</span>
-          <div style={{ fontSize: 18, marginTop: 8 }}>Aggiungi nuova voce</div>
-        </div>
+
       </div>
 
       {showAddModal && (

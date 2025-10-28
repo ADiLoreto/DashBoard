@@ -126,6 +126,29 @@ Nota: queste modifiche servono a completare il flusso end-to-end prima di proced
 
 ---
 
+### 2025-10-28 — Task 6: Riorganizzazione layout Entrate Attuali (Metodo B) — Done
+
+Descrizione
+: Migliorata l'organizzazione visiva della sezione Entrate Attuali riposizionando il pulsante "Aggiungi voce" in linea con le voci manuali e separando visivamente la sezione dei cashflow generati.
+
+File coinvolti
+- `src/components/sections/EntrateAttuali/Stipendio.jsx` (riorganizzazione layout e stili)
+
+Azioni eseguite
+1. Spostato il pulsante "Aggiungi voce":
+   - Mantenuto inline con le voci manuali
+   - Allineamento a sinistra per coerenza visiva
+   - Stile e dimensioni uniformi con le altre tab
+2. Migliorata separazione sezione cashflow:
+   - Aggiunto separatore visivo con `borderTop: '1px solid var(--bg-medium)'`
+   - Aumentata spaziatura verticale con `marginTop: 32px` e `paddingTop: 24px`
+   - Migliorata coerenza visiva delle sezioni
+
+Esito
+: ✅ Completato — Il layout è ora più intuitivo con gli elementi correlati raggruppati logicamente e una chiara separazione visiva tra voci manuali e automatiche.
+
+---
+
 ### 2025-10-28 — Task 5: Uniformazione UI tab cashflow generati (Metodo A)
 
 Descrizione
