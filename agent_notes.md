@@ -75,6 +75,108 @@ Ogni task documentato in `agent_notes.md` deve seguire questa struttura:
 
 
 
+### Task correnti
+
+### 2025-10-29 — Task 3: Estensione BigTab — Done
+
+Descrizione
+: Aggiunta della gestione spese (pulsante 📓) sulle card `BigTab` per la sezione Immobili. Ora il pulsante compare in hover quando la prop `onExpensesClick` è passata e apre il popup `ExpensesPopup`.
+
+File modificati
+- `src/components/sections/AssetPatrimonio/AssetPatrimonio.jsx` — aggiunto stato `expensesFor`, handlers `handleOpenExpenses`, `handleCloseExpenses`, `handleSaveExpenses`, passata la prop `onExpensesClick` a `BigTab` e reso `ExpensesPopup`.
+- `src/components/ui/BigTab.jsx` — (già aggiornato) aggiunta prop `onExpensesClick` e visualizzazione dell'icona 📓 in hover.
+- `src/components/ui/ExpensesPopup.jsx` — componente esistente usato per la gestione spese (props: `isOpen`, `initialData`, `onClose`, `onSave`).
+
+Azioni eseguite
+- Wireup: passato `onExpensesClick` dalle card immobili a `BigTab`.
+- Popup: render condizionale di `ExpensesPopup` con `initialData` e salvataggio tramite `UPDATE_PATRIMONIO_IMMOBILE`.
+- Verifica manuale: hover su una card immobile dovrebbe mostrare ora 📓; clic apre il popup.
+
+Esito
+: ✅ Completato. Patch applicata e salvata nel repository.
+
+### 2025-10-29 — Task 4: Integrazione AssetPatrimonio — Done
+
+Descrizione
+: Integrare i calcoli di rendita netta e ROI nella renderizzazione delle card Immobili e collegare i dati del popup spese ai salvataggi del reducer.
+
+File modificati
+- `src/components/sections/AssetPatrimonio/AssetPatrimonio.jsx` — calcolo `income` e `roi` per ogni immobile, passati a `BigTab` tramite `roiDetails`; aggiunto import dei calcoli.
+- `src/components/ui/BigTab.jsx` — (già aggiornato) gestione di `roiDetails` e visualizzazione compatta nella card.
+- `src/components/ui/ExpensesPopup.jsx` — UI popup per gestione spese (usato nel flow di salvataggio).
+- `src/utils/calculations.js` — funzioni `calculateNetIncome` e `calculateROI` (già presenti e utilizzate).
+
+Azioni eseguite
+- Calcoli: usate le utility `calculateNetIncome` e `calculateROI` per ogni immobile.
+- UI: passato `roiDetails={{ roi, income }}` a `BigTab` così le card mostrano ROI e rendita.
+- Salvataggio: `ExpensesPopup` salva i campi (`expenses`, `taxRate`, `yearlyRent`) e viene dispatchata l'azione `UPDATE_PATRIMONIO_IMMOBILE`.
+
+Esito
+: ✅ Completato. Patch applicata e test manuale suggerito (hover + apertura popup + salvataggio) per verificare visualizzazione e persistenza.
+
+### 2025-10-29 — Task 7: Implementazione calcolo ROI e spese immobili (Metodo A)
+
+Descrizione
+: Aggiungere il sistema di gestione spese e calcolo ROI per gli immobili, includendo un popup dedicato per l'inserimento delle spese e la visualizzazione dei calcoli nella card dell'immobile.
+
+File coinvolti
+- `src/components/sections/AssetPatrimonio/AssetPatrimonio.jsx` (gestione stato e logica)
+- `src/components/ui/BigTab.jsx` (estensione UI per mostrare ROI e rendita)
+- `src/components/ui/ExpensesPopup.jsx` (nuovo componente per gestione spese)
+- `src/utils/calculations.js` (nuove funzioni di calcolo)
+- `src/context/FinanceContext.jsx` (estensione state per spese immobili)
+
+Azioni da eseguire
+1. Backend e State Management: ✅ Done
+   - Esteso schema immobili con `expenses[]`, `taxRate`, `yearlyRent`
+   - Aggiunta action `UPDATE_IMMOBILE_EXPENSES`
+   - Implementati helper `calculateROI` e `calculateNetIncome` in `calculations.js`
+
+2. Popup Gestione Spese: ✅ Done
+   - Creato componente `ExpensesPopup.jsx` con:
+     - Lista dinamica spese implementata con add/remove
+     - Input numerici validati per spese/tassazione/affitto
+     - Calcoli real-time per totale, rendita e ROI
+     - UI coerente e responsive con temi applicazione
+
+3. Estensione BigTab: ✅ Done
+   - Aggiunto pulsante gestione spese (📓) visibile in hover
+   - Implementata sezione ROI details con stile compatto
+   - Aggiunta prop roiDetails per gestione dati
+   - Mantenuta compatibilità con funzionalità esistenti
+
+4. Integrazione AssetPatrimonio:✅ Done
+   - Aggiungere stato per controllo popup spese
+   - Implementare handlers per salvataggio/modifica spese
+   - Collegare calcoli ROI al componente BigTab
+   - Aggiornare visualizzazione immobili con nuove info
+
+5. Testing e Validazione:
+   - Testare inserimento spese multiple
+   - Verificare calcoli ROI e rendita
+   - Controllare persistenza dati
+   - Validare UX del popup
+
+Obiettivi UI/UX:
+- Popup spese intuitivo con aggiunta dinamica voci
+- Visualizzazione compatta ma chiara di ROI e rendita
+- Coerenza visiva con il resto dell'applicazione
+- Feedback immediato sui calcoli
+
+Esempio struttura dati:
+```javascript
+immobile: {
+  id: string,
+  titolo: string,
+  valore: number,
+  yearlyRent: number,
+  taxRate: number,
+  expenses: [
+    { title: string, amount: number }
+  ]
+}
+```
+
 ### Task completate (storico)
 
 ### 2025-10-28 — Task 5: Uniformazione UI tab cashflow generati (Metodo A) — Done

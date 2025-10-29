@@ -83,6 +83,24 @@ const financeReducer = (state, action) => {
 
     case 'ADD_PATRIMONIO_IMMOBILE':
       return { ...state, patrimonio: { ...state.patrimonio, immobili: [ ...(state.patrimonio.immobili || []), action.payload ] } };
+    case 'UPDATE_IMMOBILE_EXPENSES':
+      return {
+        ...state,
+        patrimonio: {
+          ...state.patrimonio,
+          immobili: state.patrimonio.immobili.map(i => 
+            i.id === action.payload.id 
+              ? { 
+                  ...i, 
+                  expenses: action.payload.expenses,
+                  taxRate: action.payload.taxRate,
+                  yearlyRent: action.payload.yearlyRent
+                }
+              : i
+          )
+        }
+      };
+
     case 'UPDATE_PATRIMONIO_IMMOBILE':
       return { ...state, patrimonio: { ...state.patrimonio, immobili: (state.patrimonio.immobili || []).map(i => i.id === action.payload.id ? { ...i, ...action.payload } : i) } };
     case 'DELETE_PATRIMONIO_IMMOBILE':

@@ -5,6 +5,8 @@ import { AuthContext } from '../../../context/AuthContext';
 import { FinanceContext } from '../../../context/FinanceContext';
 import BigTab from '../../ui/BigTab';
 import AssetWizard from '../../wizard/AssetWizard';
+import { calculateNetIncome, calculateROI } from '../../../utils/calculations';
+import ExpensesPopup from '../../ui/ExpensesPopup';
 import { PieChart, Pie, Cell } from 'recharts';
 
 // animated inline SVG donut chart: items (array), getValue(item) -> number
@@ -91,7 +93,12 @@ const AssetPatrimonio = () => {
 
   const conti = (state.patrimonio && state.patrimonio.contiDeposito) || [];
   // Immobili (ex contiDepositoExtra) — sezione per valori immobiliari
-  const immobili = (state.patrimonio && state.patrimonio.immobili) || [];
+  const immobili = ((state.patrimonio && state.patrimonio.immobili) || []).map(i => ({
+    ...i,
+    expenses: i.expenses || [],
+    taxRate: i.taxRate || 0,
+    yearlyRent: i.yearlyRent || 0
+  }));
 
   const buoni = (state.patrimonio && state.patrimonio.buoniTitoli) || [];
   const azioni = (state.patrimonio && state.patrimonio.investimenti && state.patrimonio.investimenti.azioni) || [];
@@ -141,6 +148,20 @@ const AssetPatrimonio = () => {
   const [showEditImmobile, setShowEditImmobile] = useState(false);
   const [newImmobile, setNewImmobile] = useState({ titolo: '', valore: '' });
   const [editingImmobile, setEditingImmobile] = useState(null);
+  // Expenses popup state for immobili
+  const [expensesFor, setExpensesFor] = useState(null);
+
+  const handleOpenExpenses = (asset) => {
+    setExpensesFor(asset);
+  };
+  const handleCloseExpenses = () => setExpensesFor(null);
+  const handleSaveExpenses = (data) => {
+    // data: { expenses: [...], taxRate, yearlyRent }
+    if (!expensesFor) { setExpensesFor(null); return; }
+    const updated = { ...expensesFor, ...data };
+    dispatch({ type: 'UPDATE_PATRIMONIO_IMMOBILE', payload: updated });
+    setExpensesFor(null);
+  };
 
   // global Escape key handler: when any "add" modal is open, ESC cancels it
   React.useEffect(() => {
@@ -460,21 +481,27 @@ const AssetPatrimonio = () => {
                 {/* entries - only visible when open */}
                 <div style={{ marginTop: 12, display: open ? 'flex' : 'none', flexDirection: 'column', gap: 12, overflowY: 'auto', paddingBottom: 8 }}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start', justifyContent: 'center' }}>
-                    {immobili.map(i => (
-                        <BigTab
-                        key={i.id}
-                        title={i.titolo || i.name || 'Immobile'}
-                        value={i.valore}
-                        titleStyle={{ fontSize: 22 }}
-                        valueStyle={{ fontSize: 20, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
-                        onUpdate={update => {
-                          if (update.title !== undefined) dispatch({ type: 'UPDATE_PATRIMONIO_IMMOBILE', payload: { ...i, titolo: update.title } });
-                          if (update.value !== undefined) dispatch({ type: 'UPDATE_PATRIMONIO_IMMOBILE', payload: { ...i, valore: Number(update.value) } });
-                        }}
-                        onDelete={() => handleDeleteImmobile(i.id)}
-                        onEditCashflow={() => handleEditAsset(i, 'immobili')}
-                      />
-                    ))}
+                    {immobili.map(i => {
+                        const income = calculateNetIncome(i.yearlyRent || 0, i.expenses || [], i.taxRate || 0);
+                        const roi = calculateROI(i.yearlyRent || 0, i.expenses || [], i.taxRate || 0, i.valore || 0);
+                        return (
+                          <BigTab
+                            key={i.id}
+                            title={i.titolo || i.name || 'Immobile'}
+                            value={i.valore}
+                            titleStyle={{ fontSize: 22 }}
+                            valueStyle={{ fontSize: 20, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
+                            onUpdate={update => {
+                              if (update.title !== undefined) dispatch({ type: 'UPDATE_PATRIMONIO_IMMOBILE', payload: { ...i, titolo: update.title } });
+                              if (update.value !== undefined) dispatch({ type: 'UPDATE_PATRIMONIO_IMMOBILE', payload: { ...i, valore: Number(update.value) } });
+                            }}
+                            onDelete={() => handleDeleteImmobile(i.id)}
+                            onEditCashflow={() => handleEditAsset(i, 'immobili')}
+                            onExpensesClick={() => handleOpenExpenses(i)}
+                            roiDetails={{ roi: isNaN(roi) ? '0.00' : Number(roi).toFixed(2), income: isNaN(income) ? '0.00' : Number(income).toFixed(2) }}
+                          />
+                        );
+                    })}
                     <div className="big-tab add-tab" onClick={() => handleAddAsset('immobili')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
@@ -671,6 +698,16 @@ const AssetPatrimonio = () => {
             assetType={wizardAssetType}
             onClose={() => { setShowWizard(false); setWizardAsset(null); setWizardAssetType(null); }}
             onSave={(data) => handleSaveFromWizard(data)}
+          />
+        )}
+
+        {/* Expenses popup for immobili (gestione spese / ROI) */}
+        {expensesFor && (
+          <ExpensesPopup
+            isOpen={!!expensesFor}
+            initialData={expensesFor}
+            onClose={handleCloseExpenses}
+            onSave={handleSaveExpenses}
           />
         )}
 

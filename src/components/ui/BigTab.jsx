@@ -18,7 +18,9 @@ const BigTab = ({
   allowValueEdit, // optional override
   subtitle,
   footer,
-  onEditCashflow  // new prop for cashflow editing
+  onEditCashflow,  // for cashflow editing
+  onExpensesClick, // for expenses management
+  roiDetails     // for ROI and income details
 }) => {
   const [editingField, setEditingField] = useState(null); // 'title' | 'value' | null
   const [draftTitle, setDraftTitle] = useState(title);
@@ -165,8 +167,8 @@ const BigTab = ({
         </div>
       )}
 
-      {/* Cestino per eliminare e icona modifica cashflow */}
-      {hovered && (canEditTitle || canEditValue) && (
+      {/* Pulsanti azione (spese, cashflow, elimina) */}
+      {hovered && (
         <div style={{ position: 'absolute', top: 8, right: 12, display: 'flex', gap: 8, zIndex: 2 }}>
           {onEditCashflow && (
             <button
@@ -185,6 +187,26 @@ const BigTab = ({
               title="Modifica cashflow"
             >
               💰
+            </button>
+          )}
+          {/* Pulsante gestione spese */}
+          {onExpensesClick && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onExpensesClick();
+              }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-light)',
+                fontSize: 20,
+                cursor: 'pointer',
+                padding: 0
+              }}
+              title="Gestione spese e ROI"
+            >
+              📓
             </button>
           )}
           {onDelete && (
@@ -262,6 +284,26 @@ const BigTab = ({
           </div>
         </div>
       )}
+      {/* ROI Details */}
+      {roiDetails && (
+        <div style={{
+          position: 'absolute',
+          bottom: subtitle ? 32 : 12,
+          left: 12,
+          right: 12,
+          display: 'flex',
+          justifyContent: 'space-between',
+          color: 'var(--text-muted)',
+          fontSize: 13,
+          padding: '4px 8px',
+          backgroundColor: 'var(--bg-darker)',
+          borderRadius: '4px'
+        }}>
+          <span>ROI: {roiDetails.roi}%</span>
+          <span>Rendita: €{roiDetails.income}</span>
+        </div>
+      )}
+
       {/* Subtitle / small info under the card */}
       {subtitle && (
         <div style={{ position: 'absolute', bottom: 12, left: 12, right: 12, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
