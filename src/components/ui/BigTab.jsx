@@ -16,8 +16,9 @@ const BigTab = ({
   allowEdit = true,
   allowTitleEdit, // optional override
   allowValueEdit, // optional override
-  subtitle
-  , footer
+  subtitle,
+  footer,
+  onEditCashflow  // new prop for cashflow editing
 }) => {
   const [editingField, setEditingField] = useState(null); // 'title' | 'value' | null
   const [draftTitle, setDraftTitle] = useState(title);
@@ -164,25 +165,45 @@ const BigTab = ({
         </div>
       )}
 
-      {/* Cestino per eliminare */}
-  {hovered && onDelete && (canEditTitle || canEditValue) && (
-        <button
-          onClick={onDelete}
-          style={{
-            position: 'absolute',
-            top: 8,
-            right: 12,
-            background: 'transparent',
-            border: 'none',
-            color: '#ff6b6b',
-            fontSize: 22,
-            cursor: 'pointer',
-            zIndex: 2
-          }}
-          title="Elimina"
-        >
-          🗑️
-        </button>
+      {/* Cestino per eliminare e icona modifica cashflow */}
+      {hovered && (canEditTitle || canEditValue) && (
+        <div style={{ position: 'absolute', top: 8, right: 12, display: 'flex', gap: 8, zIndex: 2 }}>
+          {onEditCashflow && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditCashflow();
+              }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--accent-cyan)',
+                fontSize: 20,
+                cursor: 'pointer',
+                padding: 0
+              }}
+              title="Modifica cashflow"
+            >
+              💰
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#ff6b6b',
+                fontSize: 22,
+                cursor: 'pointer',
+                padding: 0
+              }}
+              title="Elimina"
+            >
+              🗑️
+            </button>
+          )}
+        </div>
       )}
       {(hovered || showToggleAlways) && typeof onToggle === 'function' && (
         <div

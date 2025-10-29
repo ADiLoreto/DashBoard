@@ -472,6 +472,7 @@ const AssetPatrimonio = () => {
                           if (update.value !== undefined) dispatch({ type: 'UPDATE_PATRIMONIO_IMMOBILE', payload: { ...i, valore: Number(update.value) } });
                         }}
                         onDelete={() => handleDeleteImmobile(i.id)}
+                        onEditCashflow={() => handleEditAsset(i, 'immobili')}
                       />
                     ))}
                     <div className="big-tab add-tab" onClick={() => handleAddAsset('immobili')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
