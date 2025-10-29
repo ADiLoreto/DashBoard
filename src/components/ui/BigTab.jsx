@@ -301,6 +301,16 @@ const BigTab = ({
         }}>
           <span>ROI: {roiDetails.roi}%</span>
           <span>Rendita: €{roiDetails.income}</span>
+          <span>
+            Payback: {
+              (function(p) {
+                const n = Number(p);
+                if (!isFinite(n)) return '∞';
+                if (isNaN(n)) return '—';
+                return n.toFixed(2);
+              })(roiDetails.payback)
+            } anni
+          </span>
         </div>
       )}
 

@@ -5,7 +5,7 @@ import { AuthContext } from '../../../context/AuthContext';
 import { FinanceContext } from '../../../context/FinanceContext';
 import BigTab from '../../ui/BigTab';
 import AssetWizard from '../../wizard/AssetWizard';
-import { calculateNetIncome, calculateROI } from '../../../utils/calculations';
+import { calculateNetIncome, calculateROI, calculatePayback } from '../../../utils/calculations';
 import ExpensesPopup from '../../ui/ExpensesPopup';
 import { PieChart, Pie, Cell } from 'recharts';
 
@@ -100,6 +100,15 @@ const AssetPatrimonio = () => {
     yearlyRent: i.yearlyRent || 0
   }));
 
+  // Effect per la generazione automatica dei cashflow quando gli immobili cambiano
+  React.useEffect(() => {
+    // Se ci sono immobili con yearlyRent > 0, genera i cashflow
+    const hasRentedProperties = immobili.some(i => i.yearlyRent > 0);
+    if (hasRentedProperties) {
+      dispatch({ type: 'GENERATE_CASHFLOWS_FROM_ASSETS' });
+    }
+  }, [immobili, dispatch]); // Dipendenze: immobili e dispatch
+
   const buoni = (state.patrimonio && state.patrimonio.buoniTitoli) || [];
   const azioni = (state.patrimonio && state.patrimonio.investimenti && state.patrimonio.investimenti.azioni) || [];
   const etf = (state.patrimonio && state.patrimonio.investimenti && state.patrimonio.investimenti.etf) || [];
@@ -160,6 +169,8 @@ const AssetPatrimonio = () => {
     if (!expensesFor) { setExpensesFor(null); return; }
     const updated = { ...expensesFor, ...data };
     dispatch({ type: 'UPDATE_PATRIMONIO_IMMOBILE', payload: updated });
+    // auto-generate cashflows for assets affected by this change
+    dispatch({ type: 'GENERATE_CASHFLOWS_FROM_ASSETS' });
     setExpensesFor(null);
   };
 
@@ -315,12 +326,16 @@ const AssetPatrimonio = () => {
     if (assetData.id) {
       const action = mapUpdate[type];
       if (action) dispatch({ type: action, payload: assetData });
+      // generate cashflows after updating an existing asset
+      dispatch({ type: 'GENERATE_CASHFLOWS_FROM_ASSETS' });
     } else {
       // ensure we generate an id for new items
       const id = Math.random().toString(36).slice(2,9);
       const payload = { id, ...assetData };
       const action = mapAdd[type];
       if (action) dispatch({ type: action, payload });
+      // generate cashflows after adding a new asset
+      dispatch({ type: 'GENERATE_CASHFLOWS_FROM_ASSETS' });
     }
 
     // close and reset
@@ -484,6 +499,7 @@ const AssetPatrimonio = () => {
                     {immobili.map(i => {
                         const income = calculateNetIncome(i.yearlyRent || 0, i.expenses || [], i.taxRate || 0);
                         const roi = calculateROI(i.yearlyRent || 0, i.expenses || [], i.taxRate || 0, i.valore || 0);
+                        const payback = calculatePayback(i.yearlyRent || 0, i.expenses || [], i.taxRate || 0, i.valore || 0);
                         return (
                           <BigTab
                             key={i.id}
@@ -498,7 +514,11 @@ const AssetPatrimonio = () => {
                             onDelete={() => handleDeleteImmobile(i.id)}
                             onEditCashflow={() => handleEditAsset(i, 'immobili')}
                             onExpensesClick={() => handleOpenExpenses(i)}
-                            roiDetails={{ roi: isNaN(roi) ? '0.00' : Number(roi).toFixed(2), income: isNaN(income) ? '0.00' : Number(income).toFixed(2) }}
+                            roiDetails={{
+                              roi: isNaN(roi) ? '0.00' : Number(roi).toFixed(2),
+                              income: isNaN(income) ? '0.00' : Number(income).toFixed(2),
+                              payback: payback === Infinity ? Infinity : (isNaN(payback) ? null : Number(payback))
+                            }}
                           />
                         );
                     })}

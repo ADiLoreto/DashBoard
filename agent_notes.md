@@ -95,6 +95,45 @@ Azioni eseguite
 Esito
 : ✅ Completato. Patch applicata e salvata nel repository.
 
+### 2025-10-29 — Task 8: Auto-generate cashflows on save (Metodo A) — Done
+
+Descrizione
+: Evitare che l'utente debba cliccare manualmente su "Forza generazione cashflow" dopo aver salvato i dati degli immobili (step 1/2 e 2/2 del popup/wizard). Il comportamento normale deve essere: al salvataggio dei dati cashflow/immobile il sistema genera automaticamente i cashflow derivati. Il pulsante "Forza generazione" rimane disponibile solo come fallback/emergenza.
+
+File coinvolti
+- `src/components/wizard/forms/CashflowForm.jsx` (o il componente/wizard che gestisce step 1/2 e step 2/2) — integrare dispatch al salvataggio
+- `src/components/sections/AssetPatrimonio/AssetPatrimonio.jsx` — eventuale wiring se il salvataggio avviene qui
+- `src/context/FinanceContext.jsx` — verificare action handler `GENERATE_CASHFLOWS_FROM_ASSETS` / `UPDATE_ASSET_WITH_CASHFLOWS`
+- `src/components/ui/BigTab.jsx` — (no change required, ma verificare aggiornamento visuale dopo generazione)
+- `src/utils/*` — eventuali helper di generazione
+
+Azioni proposte (step-by-step)
+1. Analisi (eseguita): identificare dove viene attualmente dispatchata l'azione di generazione cashflow (bottone "Forza generazione") e dove viene salvato il payload dal popup/wizard.
+2. Integrazione save → generate (implementata):
+   - Al termine del salvataggio dei dati dell'immobile / cashflow (quando il reducer ha aggiornato lo stato), viene ora dispatchata l'azione `GENERATE_CASHFLOWS_FROM_ASSETS` per eseguire la generazione derivata dei cashflow.
+   - Implementazione eseguita in `src/components/sections/AssetPatrimonio/AssetPatrimonio.jsx`:
+     - dopo `dispatch({ type: 'UPDATE_PATRIMONIO_IMMOBILE', payload: ... })` (saving from ExpensesPopup) viene chiamato `dispatch({ type: 'GENERATE_CASHFLOWS_FROM_ASSETS' })`.
+     - nel wizard `handleSaveFromWizard`, dopo le azioni `ADD_PATRIMONIO_*` o `UPDATE_PATRIMONIO_*`, viene chiamato `dispatch({ type: 'GENERATE_CASHFLOWS_FROM_ASSETS' })`.
+   - Nota: la generazione usa lo stato corrente del reducer (dispatch è sincrono), quindi non è necessario attendere la persistenza su storage per ottenere i cashflow generati nella UI immediatamente.
+3. Protezioni e UX:
+   - Eseguire la generazione in background (asincrona) e mostrare uno spinner o indicatore sulla card/toolbar per informare l'utente.
+   - Debounce / queue: evitare di lanciare più generazioni contemporanee per lo stesso asset (es. rapid save multipli). Usare un lock o debounce di 1-2s.
+   - Fallback: mantenere il pulsante "Forza generazione" visibile solo per utenti avanzati/diagnostica o in caso di errore.
+4. Error handling e rollback:
+   - Se la generazione fallisce, mostrare messaggio d'errore e lasciare il pulsante "Forza generazione" come recovery.
+   - Implementazione: per ora la generazione è eseguita inline nel reducer e non è ancora avvolta in un try/catch di livello UI; eventuali miglioramenti (spinner, error UI, rollback) sono elencati nei passi successivi.
+5. Test e validazione:
+   - Test manuale: salvare dati immobile via popup → attendere completamento auto-generate → verificare che i cashflow siano presenti nella sezione Entrate/Uscite.
+   - Aggiungere unit/integration tests per l'action dispatcher se possibile.
+
+Acceptance criteria
+- Salvataggio da popup/wizard genera automaticamente i cashflow per l'asset senza necessità di cliccare "Forza generazione". ✅
+- L'operazione è debounced/queued e mostra feedback visivo; il pulsante "Forza generazione" resta disponibile solo per recovery. (Work in progress: debounce/UI feedback to add)
+
+Note tecniche e rischio
+- La generazione può essere computazionalmente pesante: evitare di eseguirla nella UI thread senza feedback. Se è pesante, valutare delega a worker o esecuzione server-side.
+- Priorità: alta (migliora UX). Eseguire rollout incrementale e monitoraggio.
+
 ### 2025-10-29 — Task 4: Integrazione AssetPatrimonio — Done
 
 Descrizione
@@ -114,71 +153,11 @@ Azioni eseguite
 Esito
 : ✅ Completato. Patch applicata e test manuale suggerito (hover + apertura popup + salvataggio) per verificare visualizzazione e persistenza.
 
-### 2025-10-29 — Task 7: Implementazione calcolo ROI e spese immobili (Metodo A)
 
-Descrizione
-: Aggiungere il sistema di gestione spese e calcolo ROI per gli immobili, includendo un popup dedicato per l'inserimento delle spese e la visualizzazione dei calcoli nella card dell'immobile.
-
-File coinvolti
-- `src/components/sections/AssetPatrimonio/AssetPatrimonio.jsx` (gestione stato e logica)
-- `src/components/ui/BigTab.jsx` (estensione UI per mostrare ROI e rendita)
-- `src/components/ui/ExpensesPopup.jsx` (nuovo componente per gestione spese)
-- `src/utils/calculations.js` (nuove funzioni di calcolo)
-- `src/context/FinanceContext.jsx` (estensione state per spese immobili)
-
-Azioni da eseguire
-1. Backend e State Management: ✅ Done
-   - Esteso schema immobili con `expenses[]`, `taxRate`, `yearlyRent`
-   - Aggiunta action `UPDATE_IMMOBILE_EXPENSES`
-   - Implementati helper `calculateROI` e `calculateNetIncome` in `calculations.js`
-
-2. Popup Gestione Spese: ✅ Done
-   - Creato componente `ExpensesPopup.jsx` con:
-     - Lista dinamica spese implementata con add/remove
-     - Input numerici validati per spese/tassazione/affitto
-     - Calcoli real-time per totale, rendita e ROI
-     - UI coerente e responsive con temi applicazione
-
-3. Estensione BigTab: ✅ Done
-   - Aggiunto pulsante gestione spese (📓) visibile in hover
-   - Implementata sezione ROI details con stile compatto
-   - Aggiunta prop roiDetails per gestione dati
-   - Mantenuta compatibilità con funzionalità esistenti
-
-4. Integrazione AssetPatrimonio:✅ Done
-   - Aggiungere stato per controllo popup spese
-   - Implementare handlers per salvataggio/modifica spese
-   - Collegare calcoli ROI al componente BigTab
-   - Aggiornare visualizzazione immobili con nuove info
-
-5. Testing e Validazione:
-   - Testare inserimento spese multiple
-   - Verificare calcoli ROI e rendita
-   - Controllare persistenza dati
-   - Validare UX del popup
-
-Obiettivi UI/UX:
-- Popup spese intuitivo con aggiunta dinamica voci
-- Visualizzazione compatta ma chiara di ROI e rendita
-- Coerenza visiva con il resto dell'applicazione
-- Feedback immediato sui calcoli
-
-Esempio struttura dati:
-```javascript
-immobile: {
-  id: string,
-  titolo: string,
-  valore: number,
-  yearlyRent: number,
-  taxRate: number,
-  expenses: [
-    { title: string, amount: number }
-  ]
-}
-```
 
 ### Task completate (storico)
 
+### 2025-10-29 — Task 7: Implementazione calcolo ROI e spese immobili (Metodo A)
 ### 2025-10-28 — Task 5: Uniformazione UI tab cashflow generati (Metodo A) — Done
 ### 2025-10-28 — Task 6: Riorganizzazione layout Entrate Attuali (Metodo B) — Done
 ### 2025-10-28 — Task 4: Miglioramento contrasto wizard/popup (Metodo B) — Done

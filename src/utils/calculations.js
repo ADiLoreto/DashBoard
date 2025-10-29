@@ -14,3 +14,13 @@ export const calculateROI = (yearlyRent, expenses, taxRate, propertyValue) => {
   const value = Number(propertyValue) || 1; // prevent division by zero
   return (netIncome / value) * 100;
 };
+
+// Calcola il Payback Period (anni)
+export const calculatePayback = (monthlyRent, expenses, taxRate, propertyValue) => {
+  // Reuse calculateNetIncome which treats the first param as monthly rent and returns annual net income
+  const netIncome = calculateNetIncome(monthlyRent, expenses, taxRate);
+  const value = Number(propertyValue) || 0;
+  // if netIncome is 0, return Infinity to indicate non-recoverable
+  if (!netIncome) return Infinity;
+  return value / netIncome; // anni per rientrare
+};
