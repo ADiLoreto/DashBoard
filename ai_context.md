@@ -9,19 +9,27 @@ Stack e linguaggi principali:
 - Persistenza: localStorage (attuale) con wrapper in `src/utils/storage.js`.
 
 File chiave:
-- `src/context/FinanceContext.jsx` (provider dello stato finanziario)
+- `src/context/FinanceContext.jsx` (provider dello stato finanziario, gestione cashflow)
 - `src/context/AuthContext.jsx` (autenticazione minimale)
 - `src/hooks/useFinancialCalculations.js` (logica dei calcoli)
+- `src/hooks/useCashflowGeneration.js` (generazione automatica cashflow)
 - `src/utils/storage.js` (wrapper per localStorage)
 - `src/components/layout/Dashboard.jsx` (entry UI principale)
+- `src/components/wizard/AssetWizard.jsx` (wizard multi-step per asset)
 
 ## 2) Architettura
 Struttura cartelle (sintesi):
-- `src/components/` — componenti UI e sezioni (`layout`, `sections`, `ui`)
+- `src/components/` — componenti UI e sezioni (`layout`, `sections`, `ui`, `wizard`)
+  - `layout/` — componenti strutturali (Dashboard, Sidebar)
+  - `sections/` — sezioni principali (AssetPatrimonio, EntrateAttuali, etc.)
+  - `ui/` — componenti riutilizzabili (BigTab, EditableCard, etc.)
+  - `wizard/` — wizard multi-step per asset e cashflow
+    - `steps/` — BaseDataStep, CashflowStep
+    - `forms/` — CashflowForm e altri form modali
 - `src/context/` — provider e context (Finance, Auth)
-- `src/hooks/` — hooks riutilizzabili
+- `src/hooks/` — hooks riutilizzabili (useCashflowGeneration, useFinancialCalculations)
 - `src/utils/` — helper, formattazione, storage
-- `src/config/` — costanti e configurazioni
+- `src/config/` — costanti, configurazioni e schemi
 
 Logica frontend:
 - Stato centralizzato tramite Context + useReducer (azioni tipo `ADD_`, `UPDATE_`, `DELETE_`).
@@ -47,11 +55,14 @@ Dipendenze tra moduli:
 - Test: scrivere test unitari per helper critici (es. storage, calcoli finanziari).
 
 ## 4) Vincoli e decisioni chiave
+
 - Frontend: SPA React. Non c'è backend obbligatorio al momento.
 - Persistenza corrente: localStorage; progettare l'astrazione per facilitare futura sincronizzazione remota.
 - UI: responsive; seguire regole CSS in `src/App.css`.
 - Stato: Context + useReducer per coerenza e possibili snapshot/undo.
 - Data format: usare ISO-like `YYYY-MM-DD` per snapshot/storico.
+- Cashflow: generazione automatica da asset con frequenze configurabili (monthly/quarterly/semiannually/yearly).
+- Asset: struttura unificata con supporto per cashflow ricorrenti e wizard multi-step per creazione/modifica.
 
 ## 5) Prompt operativo (come usare questo file)
 - Leggi `ai_context.md` prima di proporre modifiche significative.
