@@ -45,7 +45,7 @@ const CashflowStep = ({ formData, setFormData }) => {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {items.map(cf => (
-          <div key={cf.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 8, borderRadius: 8, background: 'var(--bg-medium)' }}>
+          <div key={cf.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 8, borderRadius: 8, background: 'var(--bg-light)', border: '1px solid var(--bg-medium)' }}>
             <div>
               <div style={{ fontWeight: 600, color: '#000' }}>{cf.titolo || '(senza titolo)'}</div>
               <div style={{ fontSize: 12, color: '#000' }}>{cf.type} · {cf.frequency} · {cf.amount}€</div>
