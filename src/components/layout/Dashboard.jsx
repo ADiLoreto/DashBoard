@@ -382,7 +382,7 @@ const Dashboard = (props) => {
           </div>
 
           <div className="date-field">
-            <label htmlFor="save-date">Save Date</label>
+            <label htmlFor="save-date" style={{ marginRight: '288px' }}>Save Date</label>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <input
                 type="date"
