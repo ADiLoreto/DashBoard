@@ -77,86 +77,47 @@ Ogni task documentato in `agent_notes.md` deve seguire questa struttura:
 
 ### Task correnti
 
-### 2025-10-29 — Task 3: Estensione BigTab — Done
+### 2025-10-30 — Task 9: Rimozione slider tab in Uscite (Metodo A) — To Do
 
-Descrizione
-: Aggiunta della gestione spese (pulsante 📓) sulle card `BigTab` per la sezione Immobili. Ora il pulsante compare in hover quando la prop `onExpensesClick` è passata e apre il popup `ExpensesPopup`.
+#### Descrizione
+Rimuovere lo slider di selezione tab "uscite" dalle griglie all'interno della sezione Uscite, in quanto ridondante essendo già all'interno della sezione dedicata.
 
-File modificati
-- `src/components/sections/AssetPatrimonio/AssetPatrimonio.jsx` — aggiunto stato `expensesFor`, handlers `handleOpenExpenses`, `handleCloseExpenses`, `handleSaveExpenses`, passata la prop `onExpensesClick` a `BigTab` e reso `ExpensesPopup`.
-- `src/components/ui/BigTab.jsx` — (già aggiornato) aggiunta prop `onExpensesClick` e visualizzazione dell'icona 📓 in hover.
-- `src/components/ui/ExpensesPopup.jsx` — componente esistente usato per la gestione spese (props: `isOpen`, `initialData`, `onClose`, `onSave`).
+#### File coinvolti
+- `src/components/sections/Uscite/Uscite.jsx`
+- `src/components/ui/EntriesGrid.jsx`
 
-Azioni eseguite
-- Wireup: passato `onExpensesClick` dalle card immobili a `BigTab`.
-- Popup: render condizionale di `ExpensesPopup` con `initialData` e salvataggio tramite `UPDATE_PATRIMONIO_IMMOBILE`.
-- Verifica manuale: hover su una card immobile dovrebbe mostrare ora 📓; clic apre il popup.
+#### Piano implementativo
+1. Analisi:
+   - Le grid delle uscite fisse e variabili usano il componente `EntriesGrid`
+   - Lo slider viene mostrato tramite una prop del componente `EntriesGrid`
 
-Esito
-: ✅ Completato. Patch applicata e salvata nel repository.
+2. Implementazione (opzioni):
+   - Aggiungere una prop `hideTabSelector` a `EntriesGrid` che quando true nasconde lo slider
+   - Oppure modificare `EntriesGrid` per nascondere lo slider quando il `sectionTitle` contiene "Uscite"
+   - La prima opzione è più flessibile e riutilizzabile
 
-### 2025-10-29 — Task 8: Auto-generate cashflows on save (Metodo A) — Done
+3. Modifiche da apportare:
+   - In `EntriesGrid.jsx`:
+     - Aggiungere prop `hideTabSelector: boolean`
+     - Condizionare il render del tab selector in base alla prop
+   - In `Uscite.jsx`:
+     - Passare `hideTabSelector={true}` a entrambe le `EntriesGrid`
 
-Descrizione
-: Evitare che l'utente debba cliccare manualmente su "Forza generazione cashflow" dopo aver salvato i dati degli immobili (step 1/2 e 2/2 del popup/wizard). Il comportamento normale deve essere: al salvataggio dei dati cashflow/immobile il sistema genera automaticamente i cashflow derivati. Il pulsante "Forza generazione" rimane disponibile solo come fallback/emergenza.
+4. Testing:
+   - Verificare che lo slider sia nascosto in entrambe le grid delle uscite
+   - Verificare che lo slider rimanga visibile nelle altre sezioni che usano `EntriesGrid`
+   - Verificare che il comportamento delle grid rimanga invariato
 
-File coinvolti
-- `src/components/wizard/forms/CashflowForm.jsx` (o il componente/wizard che gestisce step 1/2 e step 2/2) — integrare dispatch al salvataggio
-- `src/components/sections/AssetPatrimonio/AssetPatrimonio.jsx` — eventuale wiring se il salvataggio avviene qui
-- `src/context/FinanceContext.jsx` — verificare action handler `GENERATE_CASHFLOWS_FROM_ASSETS` / `UPDATE_ASSET_WITH_CASHFLOWS`
-- `src/components/ui/BigTab.jsx` — (no change required, ma verificare aggiornamento visuale dopo generazione)
-- `src/utils/*` — eventuali helper di generazione
-
-Azioni proposte (step-by-step)
-1. Analisi (eseguita): identificare dove viene attualmente dispatchata l'azione di generazione cashflow (bottone "Forza generazione") e dove viene salvato il payload dal popup/wizard.
-2. Integrazione save → generate (implementata):
-   - Al termine del salvataggio dei dati dell'immobile / cashflow (quando il reducer ha aggiornato lo stato), viene ora dispatchata l'azione `GENERATE_CASHFLOWS_FROM_ASSETS` per eseguire la generazione derivata dei cashflow.
-   - Implementazione eseguita in `src/components/sections/AssetPatrimonio/AssetPatrimonio.jsx`:
-     - dopo `dispatch({ type: 'UPDATE_PATRIMONIO_IMMOBILE', payload: ... })` (saving from ExpensesPopup) viene chiamato `dispatch({ type: 'GENERATE_CASHFLOWS_FROM_ASSETS' })`.
-     - nel wizard `handleSaveFromWizard`, dopo le azioni `ADD_PATRIMONIO_*` o `UPDATE_PATRIMONIO_*`, viene chiamato `dispatch({ type: 'GENERATE_CASHFLOWS_FROM_ASSETS' })`.
-   - Nota: la generazione usa lo stato corrente del reducer (dispatch è sincrono), quindi non è necessario attendere la persistenza su storage per ottenere i cashflow generati nella UI immediatamente.
-3. Protezioni e UX:
-   - Eseguire la generazione in background (asincrona) e mostrare uno spinner o indicatore sulla card/toolbar per informare l'utente.
-   - Debounce / queue: evitare di lanciare più generazioni contemporanee per lo stesso asset (es. rapid save multipli). Usare un lock o debounce di 1-2s.
-   - Fallback: mantenere il pulsante "Forza generazione" visibile solo per utenti avanzati/diagnostica o in caso di errore.
-4. Error handling e rollback:
-   - Se la generazione fallisce, mostrare messaggio d'errore e lasciare il pulsante "Forza generazione" come recovery.
-   - Implementazione: per ora la generazione è eseguita inline nel reducer e non è ancora avvolta in un try/catch di livello UI; eventuali miglioramenti (spinner, error UI, rollback) sono elencati nei passi successivi.
-5. Test e validazione:
-   - Test manuale: salvare dati immobile via popup → attendere completamento auto-generate → verificare che i cashflow siano presenti nella sezione Entrate/Uscite.
-   - Aggiungere unit/integration tests per l'action dispatcher se possibile.
-
-Acceptance criteria
-- Salvataggio da popup/wizard genera automaticamente i cashflow per l'asset senza necessità di cliccare "Forza generazione". ✅
-- L'operazione è debounced/queued e mostra feedback visivo; il pulsante "Forza generazione" resta disponibile solo per recovery. (Work in progress: debounce/UI feedback to add)
-
-Note tecniche e rischio
-- La generazione può essere computazionalmente pesante: evitare di eseguirla nella UI thread senza feedback. Se è pesante, valutare delega a worker o esecuzione server-side.
-- Priorità: alta (migliora UX). Eseguire rollout incrementale e monitoraggio.
-
-### 2025-10-29 — Task 4: Integrazione AssetPatrimonio — Done
-
-Descrizione
-: Integrare i calcoli di rendita netta e ROI nella renderizzazione delle card Immobili e collegare i dati del popup spese ai salvataggi del reducer.
-
-File modificati
-- `src/components/sections/AssetPatrimonio/AssetPatrimonio.jsx` — calcolo `income` e `roi` per ogni immobile, passati a `BigTab` tramite `roiDetails`; aggiunto import dei calcoli.
-- `src/components/ui/BigTab.jsx` — (già aggiornato) gestione di `roiDetails` e visualizzazione compatta nella card.
-- `src/components/ui/ExpensesPopup.jsx` — UI popup per gestione spese (usato nel flow di salvataggio).
-- `src/utils/calculations.js` — funzioni `calculateNetIncome` e `calculateROI` (già presenti e utilizzate).
-
-Azioni eseguite
-- Calcoli: usate le utility `calculateNetIncome` e `calculateROI` per ogni immobile.
-- UI: passato `roiDetails={{ roi, income }}` a `BigTab` così le card mostrano ROI e rendita.
-- Salvataggio: `ExpensesPopup` salva i campi (`expenses`, `taxRate`, `yearlyRent`) e viene dispatchata l'azione `UPDATE_PATRIMONIO_IMMOBILE`.
-
-Esito
-: ✅ Completato. Patch applicata e test manuale suggerito (hover + apertura popup + salvataggio) per verificare visualizzazione e persistenza.
-
-
+#### Note
+- Mantenere la logica interna di EntriesGrid che usa il tipo "uscita"
+- Non modificare il comportamento, solo la UI
+- L'implementazione deve essere retrocompatibile con l'uso esistente di EntriesGrid
 
 ### Task completate (storico)
 
+### 2025-10-29 — Task 3: Estensione BigTab — Done
+### 2025-10-29 — Task 8: Auto-generate cashflows on save (Metodo A) — Done
+### 2025-10-29 — Task 4: Integrazione AssetPatrimonio — Done
 ### 2025-10-29 — Task 7: Implementazione calcolo ROI e spese immobili (Metodo A)
 ### 2025-10-28 — Task 5: Uniformazione UI tab cashflow generati (Metodo A) — Done
 ### 2025-10-28 — Task 6: Riorganizzazione layout Entrate Attuali (Metodo B) — Done

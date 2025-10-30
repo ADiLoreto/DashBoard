@@ -4,7 +4,7 @@ import BigTab from './BigTab';
 // props:
 // entries: array of { id, titolo, importo, isCosto }
 // onAdd(payload), onUpdate(payload), onDelete(id), onToggle(id)
-const EntriesGrid = ({ entries = [], onAdd, onUpdate, onDelete, onToggle, sectionTitle = '', toggleAlways = false }) => {
+const EntriesGrid = ({ entries = [], onAdd, onUpdate, onDelete, onToggle, sectionTitle = '', toggleAlways = false, hideTabSelector = false }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [draft, setDraft] = useState({ titolo: '', importo: '' });
 
@@ -36,9 +36,9 @@ const EntriesGrid = ({ entries = [], onAdd, onUpdate, onDelete, onToggle, sectio
               onUpdate(payload);
             }}
             onDelete={() => onDelete(e.id)}
-            onToggle={() => onToggle && onToggle(e.id)}
+            onToggle={hideTabSelector ? undefined : (onToggle ? () => onToggle(e.id) : undefined)}
             toggleValue={e.isCosto}
-            showToggleAlways={toggleAlways}
+            showToggleAlways={!hideTabSelector && toggleAlways}
           />
         ))}
 

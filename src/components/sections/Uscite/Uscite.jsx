@@ -30,11 +30,25 @@ const Uscite = () => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         <div>
           <h3 style={{ color: 'var(--bg-light)', fontSize: 20, marginBottom: 8 }}>Fisse</h3>
-          <EntriesGrid entries={state.uscite.fisse || []} onAdd={addFissa} onUpdate={updateFissa} onDelete={deleteFissa} sectionTitle="Uscite Fisse" />
+          <EntriesGrid 
+            entries={state.uscite.fisse || []} 
+            onAdd={addFissa} 
+            onUpdate={updateFissa} 
+            onDelete={deleteFissa} 
+            sectionTitle="Uscite Fisse"
+            hideTabSelector={true} 
+          />
         </div>
         <div>
           <h3 style={{ color: 'var(--bg-light)', fontSize: 20, marginBottom: 8 }}>Variabili</h3>
-          <EntriesGrid entries={state.uscite.variabili || []} onAdd={addVariabile} onUpdate={updateVariabile} onDelete={deleteVariabile} sectionTitle="Uscite Variabili" />
+          <EntriesGrid 
+            entries={state.uscite.variabili || []} 
+            onAdd={addVariabile} 
+            onUpdate={updateVariabile} 
+            onDelete={deleteVariabile} 
+            sectionTitle="Uscite Variabili"
+            hideTabSelector={true} 
+          />
         </div>
       </div>
     </div>
