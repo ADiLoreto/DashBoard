@@ -138,6 +138,106 @@ Segnalazione: quando si tenta di salvare con `saveDate` nel passato, la finestra
 
 Esito: Done — patch applicata. Richiesta successiva: aprire l'app in sviluppo e riprodurre il salvataggio con `saveDate` nel passato per raccogliere i log di debug e, se necessario, procedere con unit test per `expandDiffs` e `handleAttemptSave`.
 
+---
+
+### 2025-11-03 — Task 23: Candidate-value chooser (Metodo A)
+
+#### Obiettivo
+Implementare nella `HistoricalSavePreviewModal` un pannello di scelta per i campi che presentano più candidate values (es.: valore appena modificato, valore storico alla data target, valore corrente oggi). L'utente può scegliere quale valore applicare alla data storica selezionata.
+
+#### UX proposta (sintesi)
+- Per ogni campo con più candidate, mostrare un mini-panel con:
+  - Titolo campo (es. "Stipendio")
+  - Tre opzioni radio/choice:
+   - "Valore appena modificato (2200€) — appena inserito" (evidenziato)
+   - "Valore storico alla data scelta (2000€) — snapshot 03‑Set"
+   - "Valore corrente oggi (2500€) — stato attuale"
+  - Info contestuale (date, fonte: form/history) e un tooltip "Perché vedo queste opzioni?"
+  - Default: pre‑selezionare il valore appena modificato.
+- Opzionale: checkbox globale “Applica a tutti i campi simili?” quando ha senso.
+
+#### Implementazione tecnica (passi)
+1. Enrich diffs: durante l'espansione (in `expandDiffs`) arricchire ogni diff item con i seguenti metadata candidati:
+  - `proposedEdited` (valore appena modificato — proveniente dal `proposedState` che l'utente sta tentando di salvare)
+  - `existingAtTargetDate` (valore storico presente nello snapshot alla data target)
+  - `currentNow` (valore corrente nel `state` / snapshot più recente)
+
+2. UI: `src/components/ui/HistoricalSavePreviewModal.jsx`
+  - Per ogni item diff che abbia più di una candidate value, rendere il rendering un pannello di scelta (radio) invece della singola riga.
+  - Quando l'utente seleziona un'opzione, includere nell'oggetto di selezione l'origine scelta (`origin: 'proposedEdited' | 'existingAtTargetDate' | 'currentNow'`) e il valore scelto.
+
+3. Storage: modificare `applySelectedDiffs(existingState, proposedState, selectedDiffs)` per applicare il `value` scelto per ogni diff (rispettando l'origine scelta). Se l'origine è `currentNow`, applicare il valore corrente, ecc.
+
+4. Logging & auditing:
+  - Loggare quale origine è stata scelta per ogni campo applicato (audit trail).
+  - Mostrare un breve warning nell'UI per evidenziare che si sta modificando una data storica.
+
+5. Tests:
+  - Unit tests: mapping candidate → applied diff (3 casi: choose proposedEdited, existingAtTargetDate, currentNow).
+  - E2E: modifica campo → scegli origine diversa → verifica snapshot storico aggiornato correttamente.
+
+#### Acceptance criteria
+- Per ogni campo con candidate multiple l'utente vede e può scegliere tra le tre opzioni.
+- La scelta viene rispettata: lo snapshot storico viene aggiornato con il valore selezionato.
+- Le azioni scelte sono registrate per auditing.
+
+---
+
+### 2025-11-03 — Task 24: Fix persistent "unsaved changes" prompt and non-functional 'Salva ora'
+
+#### Problema segnalato
+All'avvio dell'app compare ripetutamente il messaggio:
+"Hai delle modifiche non salvate. Vuoi associarle a una data e salvarle? Salva ora"
+anche quando l'utente aveva già salvato prima di uscire. Inoltre, premendo il pulsante **Salva ora** non succede nulla.
+
+Questa behavior è fastidiosa e confonde l'utente; proponiamo di rimuovere o almeno nascondere temporaneamente la feature fino a quando non viene corretta. Se la feature deve rimanere, correggere il bug in modo che il prompt appaia solo quando ci sono effettivamente modifiche non salvate e che il pulsante funzioni.
+
+#### Ipotesi principali (da verificare)
+1. Il flag/draft nel localStorage non viene cancellato al salvataggio (manca `clearDraft(username)` in alcuni percorsi di salvataggio). `loadDraft(username)` ritorna true anche se non ci sono modifiche effettive.
+2. Mismatch di chiave localStorage: salvataggio e caricamento usano chiavi diverse (es. `draft` vs `draft_<username>`), quindi il flag rimane.
+3. Il controllo che decide di mostrare il prompt legge da uno state inizializzato sul mount (es. `useState(() => !!loadDraft(username))`) ma il valore non è coerente con lo stato persistente attuale (race condition all'avvio o username non inizializzato).
+4. Il pulsante "Salva ora" non invoca il corretto handler: l'evento è disconnesso o la callback passata è `noop` (onSaved mancante) oppure è bloccata da un early return (es. credible check che fallisce).
+5. Il pulsante esegue il salvataggio ma la UI non si aggiorna per rimuovere il prompt perché manca `clearDraft` o `setShowDraftMsg(false)` nel callback onSaved.
+
+#### File da ispezionare
+- `src/components/layout/Dashboard.jsx` — stato `showDraftMsg`, uso di `loadDraft`, punti in cui `saveSnapshot` viene chiamato e dove `clearDraft` dovrebbe essere invocato.
+- `src/utils/storage.js` — `loadDraft`, `saveSnapshot`, `clearDraft` implementation e le chiavi di localStorage usate.
+- Componenti che mostrano il prompt (probabilmente parte di `Dashboard` o di un componente globale di header) — verificare il markup che monta il banner/modal all'avvio.
+- Eventuali interceptor di save (onSaved callback) che potrebbero swallow gli errori.
+
+#### Piano di intervento (passi riproducibili + fix)
+1. Reproduce: avvia l'app, osserva il prompt; verifica in DevTools → Application → Local Storage le chiavi relative a draft/snapshot per l'utente corrente; annota il loro valore.
+2. Logging rapido: aggiungere log in `loadDraft`, `saveSnapshot`, `clearDraft` per vedere quando vengono chiamati e con quali chiavi/payload.
+3. Verificare che `saveSnapshot` invochi `clearDraft(username)` quando il salvataggio è andato a buon fine e che `setShowDraftMsg(false)` venga chiamato nel callback onSaved del salvataggio UI.
+4. Assicurarsi che la logica che decide `showDraftMsg` all'avvio usi `loadDraft(username)` solo dopo che `username` è inizializzato (evitare mount race). Se `username` arriva in seguito, ricalcolare `showDraftMsg` nel relativo `useEffect` su `[username, tick]`.
+5. Correggere le chiavi di localStorage se c'è mismatch (consolidare in una utility `draftKey(username)` e usarla in `loadDraft`/`saveDraft`/`clearDraft`).
+6. Fix del pulsante "Salva ora": verificare che chiama `handleAttemptSave` o `saveSnapshot` correttamente. Se il pulsante chiama solo `setShowDraftMsg(false)` senza salvare, ripristinare il comportamento corretto.
+7. Add acceptance logging: dopo il salvataggio, loggare `DRAFT CLEARED` e `SHOW DRAFT FLAG: false`.
+8. Se la feature è obsoleta o non richiesta, rimuovere i punti in cui il prompt viene montato oppure aggiungere un toggle user-setting per abilitare/disabilitare il prompt.
+
+#### Patch proposta (rapida) — scope minimo per vedere miglioramento immediato
+1. In `saveSnapshot` (o nel callback onSaved chiamato dopo `saveSnapshot`) assicurarsi di chiamare `clearDraft(username)` e `setShowDraftMsg(false)`.
+2. In `Dashboard` assicurarsi che inizializzazione `const [showDraftMsg, setShowDraftMsg] = useState(!!loadDraft(username));` venga eseguita solo quando `username` è definito; altrimenti usare `useEffect` per impostare lo stato quando `username` cambia.
+3. Aggiungere log temporanei in `handleAttemptSave` e in handler del pulsante per confermare che l'evento è squadernato correttamente.
+
+#### Acceptance criteria
+- All'avvio (dopo login) il prompt appare solo se effettivamente esiste un draft non salvato per l'utente corrente.
+- Dopo aver premuto "Salva ora" e completato il salvataggio con successo, il prompt scompare e la chiave draft è rimossa dal localStorage.
+- Se la feature è stata rimossa, lo UI non mostra più il prompt in nessun caso.
+
+---
+
+#### Operazione successiva proposta
+- Implemento i logging e la piccola patch (clearDraft + assure username init) e ti fornisco i log da verificare. Poi applico il fix definitivo (o rimuovo la feature se confermi che non serve più).
+
+#### Azione eseguita (Metodo B) — 2025-11-03 ✅ Completato
+- Descrizione sintetica: implementata patch minima per evitare che il prompt "Hai delle modifiche non salvate" rimanga visibile all'avvio quando non ci sono draft, e per fare in modo che il salvataggio rimuova il draft.
+- File modificati:
+  - `src/components/layout/Dashboard.jsx` — inizializzazione `showDraftMsg` spostata in `useEffect` che dipende da `username`, aggiunte chiamate a `clearDraft(username)` e `setShowDraftMsg(false)` dopo i percorsi di salvataggio (`saveSnapshot`) e dopo l'applicazione dei diffs selezionati; aggiunti log diagnostici `DRAFT CLEARED`.
+  - Nessuna modifica a `src/utils/storage.js` necessaria (funzioni `loadDraft`/`clearDraft` erano già presenti).
+- Verifica rapida: build dev compilata; aprire l'app, salvare, chiudere e riaprire per verificare che il prompt non riappaia quando non ci sono draft.
+
+
 
 ### 2025-10-31 — Task 11: Interactive historical preview - per-item selection (Metodo B) — Done
 

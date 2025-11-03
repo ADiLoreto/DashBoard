@@ -23,7 +23,10 @@ const Dashboard = (props) => {
   const username = user?.username;
   const { dirty, markSaved, state } = useContext(FinanceContext);
   const [tick, setTick] = useState(0);
-  const [showDraftMsg, setShowDraftMsg] = useState(!!loadDraft(username));
+  const [showDraftMsg, setShowDraftMsg] = useState(false);
+  const [draftSummary, setDraftSummary] = useState([]);
+  const [draftDebug, setDraftDebug] = useState(null);
+  const [showDraftDetails, setShowDraftDetails] = useState(false);
   const [history, setHistory] = useState(() => loadHistory(username));
   // user-specific settings (stored in localStorage under user_settings_<username>)
   const [userSettings, setUserSettings] = useState(() => {
@@ -58,6 +61,30 @@ const Dashboard = (props) => {
   const [previewOnSaved, setPreviewOnSaved] = useState(null);
 
   const canonicalizeDate = (d) => d ? String(d).slice(0,10) : '';
+
+  // stable stringify with sorted object keys to avoid false positives from key order
+  const stableStringify = (v) => {
+    const helper = (obj) => {
+      if (obj === null) return 'null';
+      if (obj === undefined) return 'undefined';
+      if (Array.isArray(obj)) return `[${obj.map(i => helper(i)).join(',')}]`;
+      if (typeof obj === 'object') {
+        const keys = Object.keys(obj).sort();
+        return `{${keys.map(k => `${JSON.stringify(k)}:${helper(obj[k])}`).join(',')}}`;
+      }
+      return JSON.stringify(obj);
+    };
+    try { return helper(v); } catch (e) { return String(v); }
+  };
+
+  const equalish = (a, b) => {
+    // treat undefined/null and empty array as equivalent when empty
+    const isEmptyArray = x => Array.isArray(x) && x.length === 0;
+    if ((a === undefined || a === null) && isEmptyArray(b)) return true;
+    if ((b === undefined || b === null) && isEmptyArray(a)) return true;
+    // normal deep compare using stable stringify
+    return stableStringify(a) === stableStringify(b);
+  };
 
   const computeDiffs = (existingState = {}, proposedState = {}) => {
     // computeDiffs: compare section-by-section and return raw diffs (do NOT expand arrays here)
@@ -116,10 +143,11 @@ const Dashboard = (props) => {
             console.log('PROPOSED STATE:', JSON.stringify(proposedState, null, 2));
           } catch (e) { /* ignore */ }
         }
-        saveSnapshot(snapshot, username);
-        setSaveConfirm(`Snapshot salvato: ${canonical}`);
-        setTimeout(() => setSaveConfirm(''), 3000);
-        setTick(t => t + 1);
+  saveSnapshot(snapshot, username);
+  try { clearDraft(username); setShowDraftMsg(false); console.log('DRAFT CLEARED after saveSnapshot'); } catch (e) {}
+  setSaveConfirm(`Snapshot salvato: ${canonical}`);
+  setTimeout(() => setSaveConfirm(''), 3000);
+  setTick(t => t + 1);
         return;
       }
       // Diagnostic logging (full payload preview)
@@ -140,6 +168,7 @@ const Dashboard = (props) => {
     } else {
       // normal save
       saveSnapshot(snapshot, username);
+      try { clearDraft(username); setShowDraftMsg(false); console.log('DRAFT CLEARED after normal save'); } catch (e) {}
       setSaveConfirm(`Snapshot salvato: ${canonical || saveDate}`);
       setTimeout(() => setSaveConfirm(''), 3000);
       setTick(t => t + 1);
@@ -158,7 +187,8 @@ const Dashboard = (props) => {
     // ensure date present
     const snapshotToSave = { date: canonical, state: { ...(mergedState || {}), date: canonical } };
     saveSnapshot(snapshotToSave, username);
-    setShowPreview(false);
+  try { clearDraft(username); setShowDraftMsg(false); console.log('DRAFT CLEARED after applySelected'); } catch (e) {}
+  setShowPreview(false);
     setPreviewDiffs([]);
     setPreviewPayload(null);
     setSaveConfirm(`Snapshot storico (parziale) salvato: ${canonical}`);
@@ -209,6 +239,91 @@ const Dashboard = (props) => {
   React.useEffect(() => {
     if (!username) return;
     setHistory(loadHistory(username));
+    try {
+      const draft = loadDraft(username);
+      if (!draft) {
+        setShowDraftMsg(false);
+        setDraftSummary([]);
+      } else {
+        // build payload state as save would do
+        const payloadState = { ...(state || {}), ...(draft || {}) };
+        // compare payloadState with current state: if identical -> nothing to save
+        let hasChanges = false;
+        try {
+          hasChanges = JSON.stringify(payloadState) !== JSON.stringify(state || {});
+        } catch (e) {
+          hasChanges = true; // fallback: assume changes
+        }
+        if (!hasChanges) {
+          // no meaningful changes: clear lingering draft and hide prompt
+          try { clearDraft(username); } catch (e) {}
+          setShowDraftMsg(false);
+          setDraftSummary([]);
+        } else {
+          // compute a small human-readable summary of top-level sections changed
+          const sections = ['entrate','uscite','patrimonio','liquidita'];
+          const summary = [];
+          sections.forEach(sec => {
+            try {
+              const a = payloadState[sec] || {};
+              const b = state?.[sec] || {};
+              if (!equalish(a, b)) {
+                // list changed subkeys if present
+                const keysA = Object.keys(a || {});
+                const keysB = Object.keys(b || {});
+                const allKeys = Array.from(new Set([...(keysA), ...(keysB)]));
+                const changed = [];
+                allKeys.forEach(k => {
+                  try {
+                    const va = a?.[k];
+                    const vb = b?.[k];
+                    if (!equalish(va, vb)) {
+                      // for arrays, note length difference
+                      if (Array.isArray(va) || Array.isArray(vb)) {
+                        const la = Array.isArray(va) ? va.length : 0;
+                        const lb = Array.isArray(vb) ? vb.length : 0;
+                        changed.push(`${k} (array len ${la} → ${lb})`);
+                      } else {
+                        changed.push(k);
+                      }
+                    }
+                  } catch (e) {
+                    changed.push(k);
+                  }
+                });
+                if (changed.length > 0) {
+                  summary.push(`${sec}: ${changed.join(', ')}`);
+                }
+
+                // Detailed debug: if patrimonio differs and there are real changed keys, keep detailed objects for inspection in UI
+                try {
+                  if (sec === 'patrimonio' && changed.length > 0) {
+                    console.warn('DEBUG DRAFT DIFF - patrimonio detected mismatch');
+                    try { console.log('DEBUG payloadState.patrimonio:', JSON.parse(JSON.stringify(a))); } catch(e) {}
+                    try { console.log('DEBUG state.patrimonio:', JSON.parse(JSON.stringify(b))); } catch(e) {}
+                    setDraftDebug({ payload: a, state: b });
+                  }
+                } catch (e) { /* ignore debug errors */ }
+              }
+            } catch (e) {
+              summary.push(sec);
+            }
+          });
+          if (summary.length > 0) {
+            setDraftSummary(summary);
+            setShowDraftMsg(true);
+          } else {
+            // no meaningful field-level changes -> clear lingering draft
+            try { clearDraft(username); } catch (e) {}
+            setShowDraftMsg(false);
+            setDraftSummary([]);
+          }
+        }
+      }
+    } catch (e) {
+      setShowDraftMsg(false);
+      setDraftSummary([]);
+    }
   }, [username, tick]);
 
   // Calcoli dinamici dai dati nel context
@@ -551,6 +666,29 @@ const Dashboard = (props) => {
           maxWidth: 600
         }}>
           Hai delle modifiche non salvate. Vuoi associarle a una data e salvarle?
+          {draftSummary && draftSummary.length > 0 && (
+            <div style={{ marginTop: 12, fontSize: 14, fontWeight: 'normal' }}>
+              <div style={{ marginBottom: 6 }}>Modifiche rilevate:</div>
+              <ul style={{ margin: 0, paddingLeft: 18, textAlign: 'left' }}>
+                {draftSummary.map((s, i) => <li key={i}>{s}</li>)}
+              </ul>
+            </div>
+          )}
+          {draftDebug && (
+            <div style={{ marginTop: 10, textAlign: 'left' }}>
+              <button
+                onClick={() => setShowDraftDetails(d => !d)}
+                style={{ marginTop: 8, background: 'transparent', border: '1px dashed rgba(0,0,0,0.1)', color: 'inherit', padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+              >
+                {showDraftDetails ? 'Nascondi dettagli' : 'Mostra dettagli'}
+              </button>
+              {showDraftDetails && draftDebug && (
+                <pre style={{ marginTop: 8, maxHeight: 220, overflow: 'auto', background: 'rgba(0,0,0,0.04)', padding: 12, borderRadius: 6, textAlign: 'left' }}>
+                  {JSON.stringify(draftDebug, null, 2)}
+                </pre>
+              )}
+            </div>
+          )}
                   <button
                     style={{
                       marginLeft: 24,
