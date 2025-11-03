@@ -140,3 +140,65 @@ export const clearHistory = (username) => {
     // ignore
   }
 };
+
+/**
+ * Applica selettivamente un insieme di diffs (come prodotti da Dashboard.computeDiffs o expandDiffs)
+ * selectedDiffs: array of { section, field, current, proposed, itemId?, action? }
+ * @returns Un nuovo oggetto state risultante dall'applicazione immutabile delle modifiche selezionate
+ */
+export const applySelectedDiffs = (existingState = {}, proposedState = {}, selectedDiffs = []) => {
+  const out = deepMerge(existingState || {}, {}); // shallow clone
+  if (!Array.isArray(selectedDiffs) || selectedDiffs.length === 0) return out;
+
+  selectedDiffs.forEach(d => {
+    const section = d.section;
+    const field = d.field;
+    if (!section) return;
+    
+    // Ensure section exists
+    if (!out[section] || typeof out[section] !== 'object') out[section] = {};
+    
+    // Handle array fields with itemId
+    if (d.itemId !== undefined) {
+      // Ensure array exists
+      if (!Array.isArray(out[section][field])) {
+        out[section][field] = [];
+      }
+      
+      const array = out[section][field];
+      const itemIdx = array.findIndex(item => item.id === d.itemId);
+      
+      switch (d.action) {
+        case 'add':
+          array.push(d.proposed);
+          break;
+          
+        case 'edit':
+          if (itemIdx !== -1) {
+            array[itemIdx] = d.proposed;
+          }
+          break;
+          
+        case 'delete':
+          if (itemIdx !== -1) {
+            array.splice(itemIdx, 1);
+          }
+          break;
+          
+        default:
+          // If no action specified, treat as replace
+          if (itemIdx !== -1) {
+            array[itemIdx] = d.proposed;
+          } else {
+            array.push(d.proposed);
+          }
+      }
+    } else {
+      // Non-array field: apply as before
+      const val = proposedState && proposedState[section] ? proposedState[section][field] : d.proposed;
+      out[section] = { ...(out[section] || {}), [field]: val };
+    }
+  });
+
+  return out;
+};

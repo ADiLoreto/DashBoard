@@ -6,6 +6,9 @@ import Stipendio from '../sections/EntrateAttuali/Stipendio';
 import AssetPatrimonio from '../sections/AssetPatrimonio/AssetPatrimonio';
 import Uscite from '../sections/Uscite/Uscite';
 import Liquidita from '../sections/Liquidita/Liquidita';
+import HistoricalSavePreviewModal from '../ui/HistoricalSavePreviewModal';
+import { applySelectedDiffs } from '../../utils/storage';
+import { expandDiffs } from '../../utils/diff';
 import ProgettiExtra, { computeTotaleProgetti } from '../sections/ProgettiExtra/ProgettiExtra';
 import LibertaGiorni from '../sections/LibertaGiorni/LibertaGiorni';
 import { useFinancialCalculations } from '../../hooks/useFinancialCalculations';
@@ -49,6 +52,123 @@ const Dashboard = (props) => {
     crypto: true,
   oro: true,
   });
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewDiffs, setPreviewDiffs] = useState([]);
+  const [previewPayload, setPreviewPayload] = useState(null);
+  const [previewOnSaved, setPreviewOnSaved] = useState(null);
+
+  const canonicalizeDate = (d) => d ? String(d).slice(0,10) : '';
+
+  const computeDiffs = (existingState = {}, proposedState = {}) => {
+    // computeDiffs: compare section-by-section and return raw diffs (do NOT expand arrays here)
+    const sections = ['entrate','uscite','patrimonio','liquidita'];
+    const diffs = [];
+
+    sections.forEach(section => {
+      const cur = existingState[section];
+      const prop = proposedState[section];
+      if (JSON.stringify(cur) !== JSON.stringify(prop)) {
+        // if object, list top-level keys; otherwise single field
+        if (cur && typeof cur === 'object' && prop && typeof prop === 'object') {
+          const keys = Array.from(new Set([...(Object.keys(cur||{})), ...(Object.keys(prop||{}))]));
+          keys.forEach(k => {
+            const c = cur ? cur[k] : undefined;
+            const p = prop ? prop[k] : undefined;
+            if (JSON.stringify(c) !== JSON.stringify(p)) {
+              // Do NOT expand arrays here: return a raw diff per field
+              diffs.push({ section, field: k, current: c === undefined ? null : c, proposed: p === undefined ? null : p });
+            }
+          });
+        } else {
+          diffs.push({ section, field: section, current: cur === undefined ? null : cur, proposed: prop === undefined ? null : prop });
+        }
+      }
+    });
+    return diffs;
+  };
+
+  const handleAttemptSave = (snapshot, onSaved) => {
+    const canonical = canonicalizeDate(snapshot?.date || snapshot?.state?.date || saveDate);
+    const todayCanon = canonicalizeDate(today);
+    // if saving into past, compute diffs vs existing history entry
+    if (canonical && canonical < todayCanon) {
+  const historyArr = loadHistory(username) || [];
+  try { console.log('🔎 HISTORY DATES:', historyArr.map(h => ({ date: h?.date, stateDate: h?.state?.date }))); } catch (e) {}
+  try { console.log('🔎 looking for canonical:', canonical); } catch (e) {}
+  const existing = historyArr.find(h => canonicalizeDate(h?.date || h?.state?.date || h) === canonical);
+      const existingState = existing && existing.state ? existing.state : {};
+      const proposedState = snapshot.state || {};
+      const diffs = computeDiffs(existingState, proposedState);
+      // log raw diffs count
+      try { console.log('🔍 DIFFS DEBUG - raw diffs count:', diffs.length, { firstRaw: diffs[0] }); } catch (e) {}
+
+      // expand diffs into item-level entries (separation of responsibilities)
+      const expanded = expandDiffs(existingState, proposedState);
+      try { console.log('📦 expandDiffs OUTPUT:', { expandedCount: expanded.length, firstExpanded: expanded[0] }); } catch (e) {}
+
+      if (expanded.length === 0) {
+        // nothing to confirm, just save
+        if (diffs && diffs.length > 0) {
+          try {
+            console.warn('⚠️ expandDiffs returned 0 entries but raw diffs exist. Dumping payloads for debug.');
+            console.log('RAW DIFFS:', JSON.stringify(diffs, null, 2));
+            console.log('EXISTING STATE:', JSON.stringify(existingState, null, 2));
+            console.log('PROPOSED STATE:', JSON.stringify(proposedState, null, 2));
+          } catch (e) { /* ignore */ }
+        }
+        saveSnapshot(snapshot, username);
+        setSaveConfirm(`Snapshot salvato: ${canonical}`);
+        setTimeout(() => setSaveConfirm(''), 3000);
+        setTick(t => t + 1);
+        return;
+      }
+      // Diagnostic logging (full payload preview)
+      try {
+        console.group('🔍 DIFFS DEBUG');
+        console.log('Computed raw diffs (preview):', JSON.stringify(diffs, null, 2));
+        console.log('Raw diffs count:', diffs.length);
+        console.log('First raw diff preview:', diffs[0]);
+        console.groupEnd();
+      } catch (e) { /* ignore */ }
+
+  setPreviewDiffs(expanded);
+  setPreviewPayload(snapshot);
+  setPreviewOnSaved(() => onSaved);
+  try { console.log('🟢 SHOW PREVIEW -> about to setShowPreview(true). expandedCount:', expanded.length); } catch (e) {}
+  setShowPreview(true);
+  try { console.log('🟢 SHOW PREVIEW -> setShowPreview(true) executed'); } catch (e) {}
+    } else {
+      // normal save
+      saveSnapshot(snapshot, username);
+      setSaveConfirm(`Snapshot salvato: ${canonical || saveDate}`);
+      setTimeout(() => setSaveConfirm(''), 3000);
+      setTick(t => t + 1);
+    }
+  };
+
+  const handleApplySelected = (selectedDiffs) => {
+    // merge selected diffs into existing snapshot state and save
+    const canonical = canonicalizeDate(previewPayload?.date || previewPayload?.state?.date || saveDate);
+    const historyArr = loadHistory(username) || [];
+    const existing = historyArr.find(h => canonicalizeDate(h) === canonical);
+    const existingState = existing && existing.state ? existing.state : {};
+    const proposedState = previewPayload.state || {};
+
+    const mergedState = applySelectedDiffs(existingState, proposedState, selectedDiffs);
+    // ensure date present
+    const snapshotToSave = { date: canonical, state: { ...(mergedState || {}), date: canonical } };
+    saveSnapshot(snapshotToSave, username);
+    setShowPreview(false);
+    setPreviewDiffs([]);
+    setPreviewPayload(null);
+    setSaveConfirm(`Snapshot storico (parziale) salvato: ${canonical}`);
+    setTimeout(() => setSaveConfirm(''), 3000);
+    setTick(t => t + 1);
+    // call original onSaved callback if present
+    if (typeof previewOnSaved === 'function') {
+      try { previewOnSaved(); } catch (e) { /* ignore */ }
+    }
+  };
   // visibility state for the Liquidità chart series
   const [visibleLiquidita, setVisibleLiquidita] = useState({ conti: true, carte: true, altro: true });
 
@@ -400,13 +520,13 @@ const Dashboard = (props) => {
                     // costruisci uno stato completo partendo dallo state corrente, sovrascrivendo con il draft se presente
                     const payloadState = { ...(state || {}), ...(draft || {}) };
                     const snapshot = { date: saveDate, state: payloadState };
-                    saveSnapshot(snapshot, username);
-                    // cancella il draft solo se esisteva
-                    if (draft) clearDraft(username);
-                    setShowDraftMsg(false);
-                    setSaveConfirm(`Snapshot salvato: ${saveDate}`);
-                    setTimeout(() => setSaveConfirm(''), 3000);
-                    setTick(t => t + 1);
+                    handleAttemptSave(snapshot, () => {
+                      if (draft) clearDraft(username);
+                      setShowDraftMsg(false);
+                      setSaveConfirm(`Snapshot salvato: ${saveDate}`);
+                      setTimeout(() => setSaveConfirm(''), 3000);
+                      setTick(t => t + 1);
+                    });
                   }}
                 style={{ marginLeft: 8, background: '#06d2fa', color: '#012', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer' }}
               >
@@ -431,30 +551,31 @@ const Dashboard = (props) => {
           maxWidth: 600
         }}>
           Hai delle modifiche non salvate. Vuoi associarle a una data e salvarle?
-          <button
-            style={{
-              marginLeft: 24,
-              background: 'var(--bg-dark)',
-              color: 'var(--accent-cyan)',
-              border: 'none',
-              borderRadius: 8,
-              padding: '8px 20px',
-              fontWeight: 'bold',
-              fontSize: 18,
-              cursor: 'pointer'
-            }}
-                onClick={() => {
-                  const draft = loadDraft(username);
-                  const payloadState = { ...(state || {}), ...(draft || {}) };
-                  const snapshot = { date: saveDate, state: payloadState };
-                  saveSnapshot(snapshot, username);
-                  if (draft) clearDraft(username);
-                  setShowDraftMsg(false);
-                  setSaveConfirm(`Snapshot salvato: ${saveDate}`);
-                  setTimeout(() => setSaveConfirm(''), 3000);
-                  setTick(t => t + 1);
-                }}
-          >
+                  <button
+                    style={{
+                      marginLeft: 24,
+                      background: 'var(--bg-dark)',
+                      color: 'var(--accent-cyan)',
+                      border: 'none',
+                      borderRadius: 8,
+                      padding: '8px 20px',
+                      fontWeight: 'bold',
+                      fontSize: 18,
+                      cursor: 'pointer'
+                    }}
+                        onClick={() => {
+                          const draft = loadDraft(username);
+                          const payloadState = { ...(state || {}), ...(draft || {}) };
+                          const snapshot = { date: saveDate, state: payloadState };
+                          handleAttemptSave(snapshot, () => {
+                            if (draft) clearDraft(username);
+                            setShowDraftMsg(false);
+                            setSaveConfirm(`Snapshot salvato: ${saveDate}`);
+                            setTimeout(() => setSaveConfirm(''), 3000);
+                            setTick(t => t + 1);
+                          });
+                        }}
+                  >
             Salva ora
           </button>
         </div>
@@ -681,20 +802,30 @@ const Dashboard = (props) => {
       {saveConfirm}
     </div>
   )}
+  <HistoricalSavePreviewModal
+    visible={showPreview}
+    diffs={previewDiffs}
+    saveDate={canonicalizeDate(previewPayload?.date || previewPayload?.state?.date || saveDate)}
+    onCancel={() => { setShowPreview(false); setPreviewPayload(null); setPreviewDiffs([]); setPreviewOnSaved(null); }}
+    onConfirm={(selectedDiffs) => {
+      // selectedDiffs is provided by the modal; apply them and save selectively
+      handleApplySelected(selectedDiffs || []);
+    }}
+  />
       {/* floating save button when there are unsaved changes */}
       {dirty && (
         <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 60 }}>
           <button onClick={() => {
             const draft = loadDraft(username);
-            if (draft) {
-              saveSnapshot({ ...draft, date: saveDate }, username);
-              clearDraft(username);
-            }
-            markSaved();
-            setShowDraftMsg(false);
-            setSaveConfirm(`Snapshot salvato: ${saveDate}`);
-            setTimeout(() => setSaveConfirm(''), 3000);
-            setTick(t => t + 1);
+            const snapshot = draft ? { ...draft, date: saveDate } : { date: saveDate, state: state };
+            handleAttemptSave(snapshot, () => {
+              if (draft) clearDraft(username);
+              markSaved();
+              setShowDraftMsg(false);
+              setSaveConfirm(`Snapshot salvato: ${saveDate}`);
+              setTimeout(() => setSaveConfirm(''), 3000);
+              setTick(t => t + 1);
+            });
           }} style={{ background: 'var(--accent-cyan)', color: 'var(--bg-dark)', border: 'none', padding: '12px 18px', borderRadius: 12, fontWeight: '700', cursor: 'pointer' }}>Salva modifiche</button>
         </div>
       )}
