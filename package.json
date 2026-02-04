@@ -7,6 +7,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "build:hub": "node scripts/build-for-hub.js",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
     "test": "react-scripts test",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "eslint-plugin-react-hooks": "^7.0.1",
+    "fs-extra": "^11.3.3",
     "gh-pages": "^5.0.0",
     "react-scripts": "^5.0.1"
   },
