@@ -12,11 +12,19 @@ export const useFinancialCalculations = () => {
   }, [state.entrate]);
 
   const totalePatrimonio = useMemo(() => {
+    const inv = state.patrimonio.investimenti || {};
     return state.patrimonio.tfr +
            (state.patrimonio.contiDeposito || []).reduce((sum, c) => sum + (c.saldo || 0), 0) +
            (state.patrimonio.buoniTitoli || []).reduce((sum, b) => sum + (b.importo || 0), 0) +
-           (state.patrimonio.investimenti.azioni || []).reduce((sum, i) => sum + (i.valore || 0), 0);
-    // ...aggiungere ETF, crypto, oro
+           (state.patrimonio.immobili || []).reduce((sum, i) => sum + (i.valore || 0), 0) +
+           (inv.azioni || []).reduce((sum, i) => sum + (i.valore || 0), 0) +
+           (inv.etf || []).reduce((sum, i) => sum + (i.valore || 0), 0) +
+           (inv.crypto || []).reduce((sum, i) => sum + (i.valore || 0), 0) +
+           (inv.oro || []).reduce((sum, i) => sum + (i.valore || 0), 0) +
+           (inv.obbligazioni || []).reduce((sum, i) => sum + (i.valore || 0), 0) +
+           (inv.fondi || []).reduce((sum, i) => sum + (i.valore || 0), 0) +
+           (inv.polizze || []).reduce((sum, i) => sum + (i.valore || 0), 0) +
+           (inv.bassoRischio || []).reduce((sum, i) => sum + (i.valore || 0), 0);
   }, [state.patrimonio]);
 
   const totaleLiquidita = useMemo(() => {

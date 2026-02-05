@@ -44,6 +44,18 @@ const updateAssetInPatrimonio = (state, assetType, asset) => {
     case 'oro':
       s.patrimonio = { ...s.patrimonio, investimenti: { ...s.patrimonio.investimenti, oro: (s.patrimonio.investimenti.oro || []).map(a => a.id === asset.id ? { ...a, ...asset } : a) } };
       break;
+    case 'obbligazioni':
+      s.patrimonio = { ...s.patrimonio, investimenti: { ...s.patrimonio.investimenti, obbligazioni: (s.patrimonio.investimenti.obbligazioni || []).map(a => a.id === asset.id ? { ...a, ...asset } : a) } };
+      break;
+    case 'fondi':
+      s.patrimonio = { ...s.patrimonio, investimenti: { ...s.patrimonio.investimenti, fondi: (s.patrimonio.investimenti.fondi || []).map(a => a.id === asset.id ? { ...a, ...asset } : a) } };
+      break;
+    case 'polizze':
+      s.patrimonio = { ...s.patrimonio, investimenti: { ...s.patrimonio.investimenti, polizze: (s.patrimonio.investimenti.polizze || []).map(a => a.id === asset.id ? { ...a, ...asset } : a) } };
+      break;
+    case 'bassoRischio':
+      s.patrimonio = { ...s.patrimonio, investimenti: { ...s.patrimonio.investimenti, bassoRischio: (s.patrimonio.investimenti.bassoRischio || []).map(a => a.id === asset.id ? { ...a, ...asset } : a) } };
+      break;
     default:
       break;
   }
@@ -141,6 +153,34 @@ const financeReducer = (state, action) => {
     case 'DELETE_ORO':
       return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, oro: (state.patrimonio.investimenti.oro || []).filter(o => o.id !== action.payload.id) } } };
 
+    case 'ADD_INVESTIMENTO_OBBLIGAZIONI':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, obbligazioni: [ ...(state.patrimonio.investimenti.obbligazioni || []), action.payload ] } } };
+    case 'UPDATE_INVESTIMENTO_OBBLIGAZIONI':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, obbligazioni: (state.patrimonio.investimenti.obbligazioni || []).map(o => o.id === action.payload.id ? { ...o, ...action.payload } : o) } } };
+    case 'DELETE_INVESTIMENTO_OBBLIGAZIONI':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, obbligazioni: (state.patrimonio.investimenti.obbligazioni || []).filter(o => o.id !== action.payload.id) } } };
+
+    case 'ADD_INVESTIMENTO_FONDI':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, fondi: [ ...(state.patrimonio.investimenti.fondi || []), action.payload ] } } };
+    case 'UPDATE_INVESTIMENTO_FONDI':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, fondi: (state.patrimonio.investimenti.fondi || []).map(f => f.id === action.payload.id ? { ...f, ...action.payload } : f) } } };
+    case 'DELETE_INVESTIMENTO_FONDI':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, fondi: (state.patrimonio.investimenti.fondi || []).filter(f => f.id !== action.payload.id) } } };
+
+    case 'ADD_INVESTIMENTO_POLIZZE':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, polizze: [ ...(state.patrimonio.investimenti.polizze || []), action.payload ] } } };
+    case 'UPDATE_INVESTIMENTO_POLIZZE':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, polizze: (state.patrimonio.investimenti.polizze || []).map(p => p.id === action.payload.id ? { ...p, ...action.payload } : p) } } };
+    case 'DELETE_INVESTIMENTO_POLIZZE':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, polizze: (state.patrimonio.investimenti.polizze || []).filter(p => p.id !== action.payload.id) } } };
+
+    case 'ADD_INVESTIMENTO_BASSORISCHIO':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, bassoRischio: [ ...(state.patrimonio.investimenti.bassoRischio || []), action.payload ] } } };
+    case 'UPDATE_INVESTIMENTO_BASSORISCHIO':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, bassoRischio: (state.patrimonio.investimenti.bassoRischio || []).map(b => b.id === action.payload.id ? { ...b, ...action.payload } : b) } } };
+    case 'DELETE_INVESTIMENTO_BASSORISCHIO':
+      return { ...state, patrimonio: { ...state.patrimonio, investimenti: { ...state.patrimonio.investimenti, bassoRischio: (state.patrimonio.investimenti.bassoRischio || []).filter(b => b.id !== action.payload.id) } } };
+
     case 'ADD_USCITA_FISSA':
       return { ...state, uscite: { ...state.uscite, fisse: [ ...(state.uscite.fisse || []), action.payload ] } };
     case 'UPDATE_USCITA_FISSA':
@@ -228,6 +268,10 @@ const financeReducer = (state, action) => {
       (inv.etf || []).forEach(a => processAsset(a, 'etf'));
       (inv.crypto || []).forEach(a => processAsset(a, 'crypto'));
       (inv.oro || []).forEach(a => processAsset(a, 'oro'));
+      (inv.obbligazioni || []).forEach(a => processAsset(a, 'obbligazioni'));
+      (inv.fondi || []).forEach(a => processAsset(a, 'fondi'));
+      (inv.polizze || []).forEach(a => processAsset(a, 'polizze'));
+      (inv.bassoRischio || []).forEach(a => processAsset(a, 'bassoRischio'));
 
       // append generated entries to entrate or uscite arrays
       generated.forEach(g => {
