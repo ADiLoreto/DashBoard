@@ -1,23 +1,23 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { AuthContext } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 
-const keyFor = (username) => `user_settings_${username}`;
+const keyFor = (userId) => `user_settings_${userId}`;
 
-const loadSettings = (username) => {
-  if (!username) return { currency: 'EUR' };
-  try { return JSON.parse(localStorage.getItem(keyFor(username)) || '{}'); } catch { return { currency: 'EUR' }; }
+const loadSettings = (userId) => {
+  if (!userId) return { currency: 'EUR' };
+  try { return JSON.parse(localStorage.getItem(keyFor(userId)) || '{}'); } catch { return { currency: 'EUR' }; }
 };
 
-const saveSettings = (username, settings) => {
-  if (!username) return;
-  try { localStorage.setItem(keyFor(username), JSON.stringify(settings)); } catch {}
+const saveSettings = (userId, settings) => {
+  if (!userId) return;
+  try { localStorage.setItem(keyFor(userId), JSON.stringify(settings)); } catch {}
 };
 
 const UserMenu = () => {
-  const { user, logout } = useContext(AuthContext);
-  const username = user?.username;
-  const displayName = user?.displayName || username || '';
+  const { user, signOut } = useAuth();
+  const userId = user?.id;
+  const email = user?.email || '';
 
   const [open, setOpen] = useState(false);
   const [settings, setSettings] = useState({ currency: 'EUR' });
@@ -26,8 +26,8 @@ const UserMenu = () => {
   const [pos, setPos] = useState({ left: 0, top: 0, visibility: 'hidden' });
 
   useEffect(() => {
-    if (username) setSettings(s => ({ currency: 'EUR', ...loadSettings(username) }));
-  }, [username]);
+    if (userId) setSettings(s => ({ currency: 'EUR', ...loadSettings(userId) }));
+  }, [userId]);
 
   // position portal when opened and handle outside click
   useEffect(() => {
@@ -38,7 +38,7 @@ const UserMenu = () => {
 
     const update = () => {
       const rect = btnRef.current.getBoundingClientRect();
-      const left = rect.left + window.scrollX; // page coords
+      const left = rect.left + window.scrollX;
       const top = rect.bottom + window.scrollY;
       setPos({ left, top, visibility: 'visible' });
     };
@@ -62,20 +62,26 @@ const UserMenu = () => {
     };
   }, [open]);
 
-  const initial = displayName ? displayName.trim().charAt(0).toUpperCase() : (username ? username.charAt(0).toUpperCase() : '?');
+  const initial = email ? email.charAt(0).toUpperCase() : '?';
 
   const handleSave = () => {
-    saveSettings(username, settings);
-    // notify app that user settings changed
-    try { window.dispatchEvent(new CustomEvent('user_settings_changed', { detail: { username } })); } catch {}
+    saveSettings(userId, settings);
+    try { window.dispatchEvent(new CustomEvent('user_settings_changed', { detail: { userId } })); } catch {}
     setOpen(false);
+  };
+
+  const handleLogout = async () => {
+    const res = await signOut();
+    if (res.ok) {
+      setOpen(false);
+    }
   };
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
       <button
         ref={btnRef}
-        title={displayName || username}
+        title={email}
         onClick={() => setOpen(v => !v)}
         style={{
           width: 44,
@@ -96,18 +102,10 @@ const UserMenu = () => {
 
       {open && btnRef.current && createPortal(
         <div data-usermenu-portal style={{ position: 'absolute', left: pos.left, top: pos.top, width: 320, background: 'var(--bg-dark)', border: '1px solid rgba(255,255,255,0.06)', padding: 12, borderRadius: 8, zIndex: 9999 }}>
-          <div style={{ color: 'var(--bg-light)', fontWeight: 700, marginBottom: 8 }}>{displayName}</div>
+          <div style={{ color: 'var(--bg-light)', fontWeight: 700, marginBottom: 8 }}>Account</div>
           <div style={{ marginBottom: 8 }}>
-            <label style={{ color: 'var(--text-muted)', fontSize: 12 }}>Username</label>
-            <div style={{ color: 'var(--bg-light)', fontWeight: 600 }}>{username}</div>
-          </div>
-
-          <div style={{ marginBottom: 8 }}>
-            <label style={{ color: 'var(--text-muted)', fontSize: 12 }}>Password</label>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input readOnly value={showPass ? (localStorage.getItem('dashboard_users') ? JSON.parse(localStorage.getItem('dashboard_users'))[username]?.password || '' : '') : '••••••••'} style={{ flex: 1, background: 'var(--bg-light)', border: '1px solid rgba(255,255,255,0.04)', color: 'var(--bg-dark)', padding: '6px 8px', borderRadius: 6 }} />
-                <button onClick={() => setShowPass(s => !s)} style={{ background: 'transparent', border: 'none', color: 'var(--accent-cyan)', cursor: 'pointer' }}>{showPass ? 'Nascondi' : 'Mostra'}</button>
-            </div>
+            <label style={{ color: 'var(--text-muted)', fontSize: 12 }}>Email</label>
+            <div style={{ color: 'var(--bg-light)', fontWeight: 600, wordBreak: 'break-all' }}>{email}</div>
           </div>
 
           <div style={{ marginBottom: 12 }}>
@@ -120,12 +118,12 @@ const UserMenu = () => {
           </div>
 
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button onClick={() => { setOpen(false); }} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.04)', color: 'var(--text-muted)', padding: '6px 10px', borderRadius: 6 }}>Chiudi</button>
-            <button onClick={handleSave} style={{ background: 'var(--accent-cyan)', border: 'none', color: 'var(--bg-dark)', padding: '6px 10px', borderRadius: 6 }}>Salva</button>
+            <button onClick={() => { setOpen(false); }} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.04)', color: 'var(--text-muted)', padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}>Chiudi</button>
+            <button onClick={handleSave} style={{ background: 'var(--accent-cyan)', border: 'none', color: 'var(--bg-dark)', padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}>Salva</button>
           </div>
 
-          <div style={{ borderTop: '1px dashed rgba(255,255,255,0.03)', marginTop: 10, paddingTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <button onClick={() => { logout(); setOpen(false); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>Logout</button>
+          <div style={{ borderTop: '1px dashed rgba(255,255,255,0.03)', marginTop: 10, paddingTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+            <button onClick={handleLogout} style={{ background: 'transparent', border: 'none', color: 'var(--accent-red, #ff6b6b)', cursor: 'pointer', fontSize: 14 }}>Logout</button>
           </div>
         </div>, document.body)}
     </div>

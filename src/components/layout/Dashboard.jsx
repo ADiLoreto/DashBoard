@@ -1,64 +1,44 @@
 import React, { useState, useContext } from 'react';
 import BigTab from '../ui/BigTab';
-import { loadHistory, loadDraft, saveSnapshot, clearDraft, clearHistory } from '../../utils/storage';
-import { AuthContext } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
+import { FinanceContext } from '../../context/FinanceContext';
 import Stipendio from '../sections/EntrateAttuali/Stipendio';
 import AssetPatrimonio from '../sections/AssetPatrimonio/AssetPatrimonio';
 import Uscite from '../sections/Uscite/Uscite';
 import Liquidita from '../sections/Liquidita/Liquidita';
 import HistoricalSavePreviewModal from '../ui/HistoricalSavePreviewModal';
-import { applySelectedDiffs } from '../../utils/storage';
 import { expandDiffs } from '../../utils/diff';
 import ProgettiExtra, { computeTotaleProgetti } from '../sections/ProgettiExtra/ProgettiExtra';
 import LibertaGiorni from '../sections/LibertaGiorni/LibertaGiorni';
 import { useFinancialCalculations } from '../../hooks/useFinancialCalculations';
 import useCashflowGeneration from '../../hooks/useCashflowGeneration';
-import { FinanceContext } from '../../context/FinanceContext';
 import { formatCurrency, getUserCurrency } from '../../utils/format';
+import { loadHistory, saveSnapshot, clearDraft, loadDraft, clearHistory } from '../../utils/supabaseStorage';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Line, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 
 const Dashboard = (props) => {
   const { activeSection, setActiveSection } = props;
-  const { user } = useContext(AuthContext);
-  const username = user?.username;
-  const { dirty, markSaved, state } = useContext(FinanceContext);
+  const { user } = useAuth();
+  const userId = user?.id;
+  const { dirty, markSaved, state, loading, saveCurrentSnapshot, loadSnapshotHistory } = useContext(FinanceContext);
+
+  // ========== STATI ==========
   const [tick, setTick] = useState(0);
+  const [saveDate, setSaveDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [today] = useState(() => new Date().toISOString().split('T')[0]);
+  const [dateRange, setDateRange] = useState({ from: '', to: '' });
+  const [history, setHistory] = useState([]);
+  const [userSettings, setUserSettings] = useState({});
   const [showDraftMsg, setShowDraftMsg] = useState(false);
   const [draftSummary, setDraftSummary] = useState([]);
   const [draftDebug, setDraftDebug] = useState(null);
-  const [showDraftDetails, setShowDraftDetails] = useState(false);
-  const [history, setHistory] = useState(() => loadHistory(username));
-  // user-specific settings (stored in localStorage under user_settings_<username>)
-  const [userSettings, setUserSettings] = useState(() => {
-    try {
-      const raw = localStorage.getItem(username ? `user_settings_${username}` : 'user_settings');
-      return raw ? JSON.parse(raw) : {};
-    } catch (e) {
-      return {};
-    }
-  });
-  const dateOptions = (history || []).map(h => h.date).filter(Boolean).sort();
-  const defaultStart = dateOptions.length ? dateOptions[0] : new Date().toISOString().slice(0, 10);
-  const [dateRange, setDateRange] = useState({
-    start: defaultStart,
-    end: new Date().toISOString().slice(0, 10)
-  });
-  const [saveDate, setSaveDate] = useState(new Date().toISOString().slice(0, 10));
-  const today = new Date().toISOString().slice(0, 10);
   const [saveConfirm, setSaveConfirm] = useState('');
-  const [visibleSeries, setVisibleSeries] = useState({
-    tfr: true,
-    conti: true,
-    buoni: true,
-    azioni: true,
-    etf: true,
-    crypto: true,
-  oro: true,
-  });
   const [showPreview, setShowPreview] = useState(false);
   const [previewDiffs, setPreviewDiffs] = useState([]);
   const [previewPayload, setPreviewPayload] = useState(null);
   const [previewOnSaved, setPreviewOnSaved] = useState(null);
+  const [visibleSeries, setVisibleSeries] = useState({ tfr: true, conti: true, buoni: true, azioni: true, etf: true, crypto: true, oro: true });
+  const [visibleLiquidita, setVisibleLiquidita] = useState({ conti: true, carte: true, altro: true });
 
   const canonicalizeDate = (d) => d ? String(d).slice(0,10) : '';
 
@@ -114,71 +94,64 @@ const Dashboard = (props) => {
     return diffs;
   };
 
-  const handleAttemptSave = (snapshot, onSaved) => {
+  const handleAttemptSave = async (snapshot, onSaved) => {
+    if (!userId) {
+      setSaveConfirm('Devi essere loggato per salvare');
+      return;
+    }
+
     const canonical = canonicalizeDate(snapshot?.date || snapshot?.state?.date || saveDate);
     const todayCanon = canonicalizeDate(today);
+    
     // if saving into past, compute diffs vs existing history entry
     if (canonical && canonical < todayCanon) {
-  const historyArr = loadHistory(username) || [];
-  try { console.log('🔎 HISTORY DATES:', historyArr.map(h => ({ date: h?.date, stateDate: h?.state?.date }))); } catch (e) {}
-  try { console.log('🔎 looking for canonical:', canonical); } catch (e) {}
-  const existing = historyArr.find(h => canonicalizeDate(h?.date || h?.state?.date || h) === canonical);
-      const existingState = existing && existing.state ? existing.state : {};
-      const proposedState = snapshot.state || {};
-      const diffs = computeDiffs(existingState, proposedState);
-      // log raw diffs count
-      try { console.log('🔍 DIFFS DEBUG - raw diffs count:', diffs.length, { firstRaw: diffs[0] }); } catch (e) {}
-
-      // expand diffs into item-level entries (separation of responsibilities)
-      const expanded = expandDiffs(existingState, proposedState);
-      try { console.log('📦 expandDiffs OUTPUT:', { expandedCount: expanded.length, firstExpanded: expanded[0] }); } catch (e) {}
-
-      if (expanded.length === 0) {
-        // nothing to confirm, just save
-        if (diffs && diffs.length > 0) {
-          try {
-            console.warn('⚠️ expandDiffs returned 0 entries but raw diffs exist. Dumping payloads for debug.');
-            console.log('RAW DIFFS:', JSON.stringify(diffs, null, 2));
-            console.log('EXISTING STATE:', JSON.stringify(existingState, null, 2));
-            console.log('PROPOSED STATE:', JSON.stringify(proposedState, null, 2));
-          } catch (e) { /* ignore */ }
-        }
-  saveSnapshot(snapshot, username);
-  try { clearDraft(username); setShowDraftMsg(false); console.log('DRAFT CLEARED after saveSnapshot'); } catch (e) {}
-  setSaveConfirm(`Snapshot salvato: ${canonical}`);
-  setTimeout(() => setSaveConfirm(''), 3000);
-  setTick(t => t + 1);
-        return;
-      }
-      // Diagnostic logging (full payload preview)
       try {
-        console.group('🔍 DIFFS DEBUG');
-        console.log('Computed raw diffs (preview):', JSON.stringify(diffs, null, 2));
-        console.log('Raw diffs count:', diffs.length);
-        console.log('First raw diff preview:', diffs[0]);
-        console.groupEnd();
-      } catch (e) { /* ignore */ }
+        const historyArr = await loadSnapshotHistory();
+        const existing = historyArr.find(h => canonicalizeDate(h?.date || h?.state?.date || h) === canonical);
+        const existingState = existing && existing.state ? existing.state : {};
+        const proposedState = snapshot.state || {};
+        const diffs = computeDiffs(existingState, proposedState);
 
-  setPreviewDiffs(expanded);
-  setPreviewPayload(snapshot);
-  setPreviewOnSaved(() => onSaved);
-  try { console.log('🟢 SHOW PREVIEW -> about to setShowPreview(true). expandedCount:', expanded.length); } catch (e) {}
-  setShowPreview(true);
-  try { console.log('🟢 SHOW PREVIEW -> setShowPreview(true) executed'); } catch (e) {}
+        const expanded = expandDiffs(existingState, proposedState);
+
+        if (expanded.length === 0) {
+          const res = await saveCurrentSnapshot(canonical);
+          if (res.ok) {
+            setSaveConfirm(`Snapshot salvato: ${canonical}`);
+            setTimeout(() => setSaveConfirm(''), 3000);
+            setTick(t => t + 1);
+          } else {
+            setSaveConfirm(`Errore: ${res.error}`);
+          }
+          return;
+        }
+
+        setPreviewDiffs(expanded);
+        setPreviewPayload(snapshot);
+        setPreviewOnSaved(() => onSaved);
+        setShowPreview(true);
+      } catch (error) {
+        console.error('Error loading history:', error);
+        setSaveConfirm('Errore nel caricamento dello storico');
+      }
     } else {
       // normal save
-      saveSnapshot(snapshot, username);
-      try { clearDraft(username); setShowDraftMsg(false); console.log('DRAFT CLEARED after normal save'); } catch (e) {}
-      setSaveConfirm(`Snapshot salvato: ${canonical || saveDate}`);
-      setTimeout(() => setSaveConfirm(''), 3000);
-      setTick(t => t + 1);
+      const res = await saveCurrentSnapshot(canonical || saveDate);
+      if (res.ok) {
+        setSaveConfirm(`Snapshot salvato: ${canonical || saveDate}`);
+        setTimeout(() => setSaveConfirm(''), 3000);
+        setTick(t => t + 1);
+        if (typeof onSaved === 'function') onSaved();
+      } else {
+        setSaveConfirm(`Errore: ${res.error}`);
+      }
     }
   };
 
   const handleApplySelected = (selectedDiffs) => {
     // merge selected diffs into existing snapshot state and save
     const canonical = canonicalizeDate(previewPayload?.date || previewPayload?.state?.date || saveDate);
-    const historyArr = loadHistory(username) || [];
+    const historyArr = loadHistory(userId) || [];
     const existing = historyArr.find(h => canonicalizeDate(h) === canonical);
     const existingState = existing && existing.state ? existing.state : {};
     const proposedState = previewPayload.state || {};
@@ -186,8 +159,8 @@ const Dashboard = (props) => {
     const mergedState = applySelectedDiffs(existingState, proposedState, selectedDiffs);
     // ensure date present
     const snapshotToSave = { date: canonical, state: { ...(mergedState || {}), date: canonical } };
-    saveSnapshot(snapshotToSave, username);
-  try { clearDraft(username); setShowDraftMsg(false); console.log('DRAFT CLEARED after applySelected'); } catch (e) {}
+    saveSnapshot(snapshotToSave, userId);
+  try { clearDraft(userId); setShowDraftMsg(false); console.log('DRAFT CLEARED after applySelected'); } catch (e) {}
   setShowPreview(false);
     setPreviewDiffs([]);
     setPreviewPayload(null);
@@ -199,8 +172,6 @@ const Dashboard = (props) => {
       try { previewOnSaved(); } catch (e) { /* ignore */ }
     }
   };
-  // visibility state for the Liquidità chart series
-  const [visibleLiquidita, setVisibleLiquidita] = useState({ conti: true, carte: true, altro: true });
 
   // placeholder donut data (visual only)
   // ...existing code...
@@ -211,8 +182,8 @@ const Dashboard = (props) => {
   };
 
   const handleResetHistory = () => {
-    if (!username) return;
-    clearHistory(username);
+    if (!userId) return;
+    clearHistory(userId);
     // force re-render by bumping tick
   setTick(t => t + 1);
     setShowDraftMsg(false);
@@ -225,22 +196,34 @@ const Dashboard = (props) => {
     return () => window.removeEventListener('user_settings_changed', h);
   }, []);
 
-  // reload user settings whenever username or tick changes
+  // reload user settings whenever userId or tick changes
   React.useEffect(() => {
     try {
-      const raw = localStorage.getItem(username ? `user_settings_${username}` : 'user_settings');
+      const raw = localStorage.getItem(userId ? `user_settings_${userId}` : 'user_settings');
       setUserSettings(raw ? JSON.parse(raw) : {});
     } catch (e) {
       setUserSettings({});
     }
-  }, [username, tick]);
+  }, [userId, tick]);
 
-  // reload history when username or tick changes
+  // reload history when userId or tick changes
   React.useEffect(() => {
-    if (!username) return;
-    setHistory(loadHistory(username));
+    if (!userId) return;
+    
+    const loadHistoryData = async () => {
+      try {
+        const hist = await loadHistory(userId);
+        setHistory(hist || []);
+      } catch (e) {
+        console.error('Error loading history:', e);
+        setHistory([]);
+      }
+    };
+    
+    loadHistoryData();
+    
     try {
-      const draft = loadDraft(username);
+      const draft = loadDraft(userId);
       if (!draft) {
         setShowDraftMsg(false);
         setDraftSummary([]);
@@ -256,7 +239,7 @@ const Dashboard = (props) => {
         }
         if (!hasChanges) {
           // no meaningful changes: clear lingering draft and hide prompt
-          try { clearDraft(username); } catch (e) {}
+          try { clearDraft(userId); } catch (e) {}
           setShowDraftMsg(false);
           setDraftSummary([]);
         } else {
@@ -314,7 +297,7 @@ const Dashboard = (props) => {
             setShowDraftMsg(true);
           } else {
             // no meaningful field-level changes -> clear lingering draft
-            try { clearDraft(username); } catch (e) {}
+            try { clearDraft(userId); } catch (e) {}
             setShowDraftMsg(false);
             setDraftSummary([]);
           }
@@ -324,7 +307,7 @@ const Dashboard = (props) => {
       setShowDraftMsg(false);
       setDraftSummary([]);
     }
-  }, [username, tick]);
+  }, [userId, tick]);
 
   // Calcoli dinamici dai dati nel context
   const { totaleEntrate, totalePatrimonio, totaleLiquidita } = useFinancialCalculations();
@@ -333,7 +316,7 @@ const Dashboard = (props) => {
   // expose forceGenerate for manual/testing trigger
   const { forceGenerate } = useCashflowGeneration();
 
-  const currency = getUserCurrency(username);
+  const currency = getUserCurrency(userId);
   const totaleProgetti = computeTotaleProgetti(state.progettiExtra || []);
 
   // compute totaleUscite from state so Dashboard tab matches Uscite section
@@ -631,12 +614,12 @@ const Dashboard = (props) => {
               <button
                 type="button"
                 onClick={() => {
-                    const draft = loadDraft(username);
+                    const draft = loadDraft(userId);
                     // costruisci uno stato completo partendo dallo state corrente, sovrascrivendo con il draft se presente
                     const payloadState = { ...(state || {}), ...(draft || {}) };
                     const snapshot = { date: saveDate, state: payloadState };
                     handleAttemptSave(snapshot, () => {
-                      if (draft) clearDraft(username);
+                      if (draft) clearDraft(userId);
                       setShowDraftMsg(false);
                       setSaveConfirm(`Snapshot salvato: ${saveDate}`);
                       setTimeout(() => setSaveConfirm(''), 3000);
@@ -702,11 +685,11 @@ const Dashboard = (props) => {
                       cursor: 'pointer'
                     }}
                         onClick={() => {
-                          const draft = loadDraft(username);
+                          const draft = loadDraft(userId);
                           const payloadState = { ...(state || {}), ...(draft || {}) };
                           const snapshot = { date: saveDate, state: payloadState };
                           handleAttemptSave(snapshot, () => {
-                            if (draft) clearDraft(username);
+                            if (draft) clearDraft(userId);
                             setShowDraftMsg(false);
                             setSaveConfirm(`Snapshot salvato: ${saveDate}`);
                             setTimeout(() => setSaveConfirm(''), 3000);
@@ -721,12 +704,10 @@ const Dashboard = (props) => {
     {/* --- big tabs: moved up so they appear above charts --- */}
     {activeSection === null && (
       <div
+        className="horizontal-container"
         style={{
-          display: 'flex',
-          flexWrap: 'wrap',
           justifyContent: 'center',
           alignItems: 'center',
-          gap: 20,
           margin: '12px 0',
         }}
       >

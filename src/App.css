@@ -159,6 +159,17 @@ body {
 .sidebar a:hover {
   color: var(--accent-cyan);
 }
+/* Horizontal container: impedisce wrapping verticale su viewport stretti (Task 37 - Opzione 1) */
+.horizontal-container {
+  display: flex;
+  flex-wrap: nowrap; /* CRUCIALE: impedisce wrapping a colonna */
+  min-width: 1200px; /* Forza elementi a stare in riga */
+  width: 100%;
+  overflow-x: auto; /* Scrollabile se necessario su viewport stretti */
+  gap: 1.5em; /* Spaziatura tra elementi */
+  box-sizing: border-box;
+}
+
 .topbar {
   background-color: var(--bg-medium);
   display: flex;

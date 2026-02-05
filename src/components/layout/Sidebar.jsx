@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
 import UserMenu from './UserMenu';
-import { AuthContext } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 
 const tabs = [
   'Entrate Attuali',
@@ -12,24 +12,24 @@ const tabs = [
 ];
 
 const Sidebar = ({ onSelect, selected, onBack }) => {
-  const { user } = useContext(AuthContext);
-  const username = user?.username;
+  const { user } = useAuth();
+  const userId = user?.id;
   const [pinned, setPinned] = useState(false);
   const [hover, setHover] = useState(false);
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(username ? `user_settings_${username}` : 'user_settings');
+      const raw = localStorage.getItem(userId ? `user_settings_${userId}` : 'user_settings');
       const settings = raw ? JSON.parse(raw) : {};
       setPinned(!!settings.sidebarPinned);
     } catch { /* ignore */ }
-  }, [username]);
+  }, [userId]);
 
   const togglePinned = () => {
     const next = !pinned;
     setPinned(next);
     try {
-      const key = username ? `user_settings_${username}` : 'user_settings';
+      const key = userId ? `user_settings_${userId}` : 'user_settings';
       const raw = localStorage.getItem(key);
       const settings = raw ? JSON.parse(raw) : {};
       settings.sidebarPinned = next;

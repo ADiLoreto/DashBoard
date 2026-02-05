@@ -1,51 +1,132 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../config/supabaseClient';
 
 export const AuthContext = createContext();
 
-const USERS_KEY = 'dashboard_users';
-
-const loadUsers = () => {
-  try { return JSON.parse(localStorage.getItem(USERS_KEY) || '{}'); } catch { return {}; }
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
+  return context;
 };
 
-const saveUsers = (u) => { try { localStorage.setItem(USERS_KEY, JSON.stringify(u)); } catch {} };
+// Hook per compatibilità con vecchio codice che usa useContext(AuthContext)
+export const useAuthContext = () => useAuth();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem('dashboard_current_user');
-    if (stored) {
-      try { setUser(JSON.parse(stored)); } catch { setUser(null); }
-    }
+    // Recupera sessione esistente
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    // Listener per cambio auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const register = ({ username, password, displayName }) => {
-    const users = loadUsers();
-    if (users[username]) return { ok: false, error: 'User exists' };
-    users[username] = { password, displayName: displayName || username };
-    saveUsers(users);
-    return { ok: true };
+  // Registrazione
+  const signUp = async (email, password, username) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { username }
+        }
+      });
+      
+      if (error) throw error;
+      
+      // Crea profilo utente
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: data.user.id,
+            username,
+            email,
+            full_name: username
+          });
+        
+        if (profileError) throw profileError;
+      }
+      
+      return { ok: true, data };
+    } catch (error) {
+      console.error('Sign up error:', error);
+      return { ok: false, error: error.message };
+    }
   };
 
-  const login = ({ username, password }) => {
-    const users = loadUsers();
-    const u = users[username];
-    if (!u || u.password !== password) return { ok: false, error: 'Invalid credentials' };
-    const payload = { username, displayName: u.displayName };
-    setUser(payload);
-    try { localStorage.setItem('dashboard_current_user', JSON.stringify(payload)); } catch {}
-    return { ok: true, user: payload };
+  // Login
+  const signIn = async (email, password) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      if (error) throw error;
+      return { ok: true, data };
+    } catch (error) {
+      console.error('Sign in error:', error);
+      return { ok: false, error: error.message };
+    }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('dashboard_current_user');
+  // Logout
+  const signOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      return { ok: true };
+    } catch (error) {
+      console.error('Sign out error:', error);
+      return { ok: false, error: error.message };
+    }
+  };
+
+  // Recupera profilo completo
+  const getUserProfile = async () => {
+    if (!user) return null;
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Get profile error:', error);
+      return null;
+    }
+  };
+
+  const value = {
+    user,
+    session,
+    loading,
+    signUp,
+    signIn,
+    signOut,
+    getUserProfile
   };
 
   return (
-    <AuthContext.Provider value={{ user, register, login, logout }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

@@ -1,6 +1,6 @@
 import React, { createContext, useReducer, useEffect, useContext, useState } from 'react';
 import { initialState } from '../config/constants';
-import { saveState, loadState, loadDraft, saveDraft, clearDraft } from '../utils/storage';
+import { saveState, loadState, loadDraft, saveDraft, clearDraft, saveSnapshot, loadHistory } from '../utils/supabaseStorage';
 import { AuthContext } from './AuthContext';
 
 // Utility: calculate next generation date given frequency
@@ -338,10 +338,13 @@ const financeReducer = (state, action) => {
 };
 
 export const FinanceProvider = ({ children }) => {
-  const { user } = useContext(AuthContext);
-  const username = user?.username;
+  const authContext = useContext(AuthContext);
+  const user = authContext?.user;
+  const userId = user?.id;
+  
   const [state, dispatch] = useReducer(financeReducer, initialState);
   const [dirty, setDirty] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // normalize incoming state shapes to a canonical one used across the app
   const normalizeState = (raw = {}) => {
@@ -408,49 +411,124 @@ export const FinanceProvider = ({ children }) => {
     return s;
   };
 
+  // Carica stato al mount
   useEffect(() => {
-    if (!username) return;
-    const savedState = loadState(username);
-    if (savedState) dispatch({ type: 'LOAD_STATE', payload: normalizeState(savedState) });
-  }, [username]);
-
-  useEffect(() => {
-    if (!username) return;
-    setDirty(true);
-    const timeoutId = setTimeout(() => {
-      // persist normalized state to storage (avoid saving multiple shapes)
-      try {
-        saveState(normalizeState(state), username);
-      } catch (e) {
-        // fallback to saving raw state if normalization fails
-        saveState(state, username);
+    const loadUserState = async () => {
+      if (!userId) {
+        setLoading(false);
+        return;
       }
-      setDirty(false);
-    }, 1000);
+      
+      try {
+        const savedState = await loadState(userId);
+        if (savedState) {
+          dispatch({ type: 'LOAD_STATE', payload: normalizeState(savedState) });
+        }
+      } catch (error) {
+        console.error('Error loading user state:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadUserState();
+  }, [userId]);
+
+  // Auto-save a DB (debounced)
+  useEffect(() => {
+    if (!userId || loading) return;
+    
+    setDirty(true);
+    const timeoutId = setTimeout(async () => {
+      try {
+        await saveState(normalizeState(state), userId);
+        setDirty(false);
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      }
+    }, 2000);
+    
     return () => clearTimeout(timeoutId);
-  }, [state, username]);
+  }, [state, userId, loading]);
 
-  // auto-save draft example: whenever state changes save draft for user
+  // Draft locale (immediato)
   useEffect(() => {
-    if (!username) return;
-    try {
-      saveDraft(normalizeState(state), username);
-    } catch (e) {
-      saveDraft(state, username);
-    }
-  }, [state, username]);
+    if (!userId) return;
+    saveDraft(normalizeState(state), userId);
+  }, [state, userId]);
 
-  // ensure draft is saved on page unload
+  // Ensure draft is saved on page unload
   useEffect(() => {
-    if (!username) return;
+    if (!userId) return;
     const handler = () => {
-      try { saveDraft(normalizeState(state), username); } catch (e) { saveDraft(state, username); }
+      saveDraft(normalizeState(state), userId);
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [state, username]);
+  }, [state, userId]);
 
   const markSaved = () => setDirty(false);
 
-  return <FinanceContext.Provider value={{ state, dispatch, dirty, markSaved }}>{children}</FinanceContext.Provider>;
+  // Funzione helper per salvare snapshot
+  const saveCurrentSnapshot = async (note = '') => {
+    if (!userId) {
+      console.error('No user ID available');
+      return { ok: false, error: 'No user ID' };
+    }
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      await saveSnapshot({ date: today, state: normalizeState(state), note }, userId);
+      markSaved();
+      return { ok: true };
+    } catch (error) {
+      console.error('Error saving snapshot:', error);
+      return { ok: false, error: error.message };
+    }
+  };
+
+  // Funzione helper per caricare storico
+  const loadSnapshotHistory = async () => {
+    if (!userId) {
+      console.error('No user ID available');
+      return [];
+    }
+    try {
+      return await loadHistory(userId);
+    } catch (error) {
+      console.error('Error loading history:', error);
+      return [];
+    }
+  };
+
+  if (loading) {
+    return (
+      <FinanceContext.Provider value={{ 
+        state, 
+        dispatch, 
+        dirty, 
+        markSaved,
+        loading,
+        saveCurrentSnapshot,
+        loadSnapshotHistory
+      }}>
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-dark)', color: '#fff' }}>
+          Caricamento dati finanziari...
+        </div>
+      </FinanceContext.Provider>
+    );
+  }
+
+  return (
+    <FinanceContext.Provider value={{ 
+      state, 
+      dispatch, 
+      dirty, 
+      markSaved,
+      loading,
+      saveCurrentSnapshot,
+      loadSnapshotHistory
+    }}>
+      {children}
+    </FinanceContext.Provider>
+  );
 };

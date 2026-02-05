@@ -12,20 +12,27 @@ Ottima scelta! Supabase è **perfetto** per il tuo caso d'uso perché offre:
 
 ## 📋 **FASE 1: Setup Iniziale Supabase**
 
+> **ℹ️ Nota sulla gestione dipendenze**: Questo è un progetto React con `package.json`.
+> - ✅ `npm install` installa automaticamente le dipendenze in `package.json`
+> - ✅ No `requirements.txt` (quello è per Python)
+> - ✅ Tutte le dipendenze Node sono già gestite da npm
+
 ### **1.1 Crea progetto Supabase**
 ```bash
 # 1. Vai su https://supabase.com
 # 2. Crea nuovo progetto
-# 3. Salva le credenziali:
-#    - Project URL: https://xxxxx.supabase.co
-#    - Anon Public Key: eyJhbGc...
-#    - Service Role Key: eyJhbGc... (SEGRETA, solo backend)
+# 3. Vai su Settings > API
+# 4. Salva le credenziali:
+#    - Project URL: https://lajwhbwfpeoeetpsgyvl.supabase.co
+#    - API Key (anon/public): [sb_publishable_oCypHDVE-BZ9H6lCjuHTRQ_U9QcL73-]
+#    - Service Role Key: NON necessaria per ora (solo per admin operations)
 ```
 
-### **1.2 Installa SDK**
+### **1.2 Installa SDK** ✅ COMPLETATO
 ```bash
 npm install @supabase/supabase-js
 ```
+✅ **SDK già installato** - Controllare in `package.json`: `"@supabase/supabase-js"` presente in dependencies
 
 ### **1.3 Configura client Supabase**
 Crea `src/config/supabaseClient.js`:
@@ -45,21 +52,46 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 ```
 
-Crea `.env` (e aggiungi a `.gitignore`):
+Crea `.env` nella root del progetto (e aggiungi a `.gitignore`):
 ```env
-REACT_APP_SUPABASE_URL=https://xxxxx.supabase.co
-REACT_APP_SUPABASE_ANON_KEY=eyJhbGc...
+# Supabase Config
+REACT_APP_SUPABASE_URL=https://lajwhbwfpeoeetpsgyvl.supabase.co
+REACT_APP_SUPABASE_ANON_KEY=eyJhbGc...  # <- Incolla qui la "API Key (anon/public)"
 ```
+
+**IMPORTANTE**: La "API Key (anon/public)" che vedi in Supabase è la stessa dell'"anon key". È sicura da usare nel frontend perché le Row Level Security policies proteggono i dati.
 
 ---
 
-## 🗄️ **FASE 2: Schema Database**
+## 🗄️ **FASE 2: Schema Database** ✅ COMPLETATO
 
 ### **2.1 Struttura Tabelle PostgreSQL**
 
-Esegui questo SQL nel **SQL Editor** di Supabase:
+**⚠️ IMPORTANTE: Eseguire in 2 step separati (NON tutto insieme)**
+
+#### **STEP 1: Crea la funzione trigger** ✅
+Vai su Supabase > SQL Editor (sinistra) > Crea nuova query
+Copia SOLO questo codice e clicca "Run":
 
 ```sql
+-- ============ STEP 1: ESEGUIRE PER PRIMO ============
+-- Crea la funzione trigger (usata da più tabelle)
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+-- ✅ Aspetta "Success. No rows returned"
+```
+
+#### **STEP 2: Crea tabelle e policies** ✅
+Dopo che lo STEP 1 ha avuto successo, crea una NUOVA query e copia questo:
+
+```sql
+-- ============ STEP 2: ESEGUIRE DOPO STEP 1 ============
+
 -- ============================================
 -- TABELLA UTENTI (estende auth.users)
 -- ============================================
@@ -75,15 +107,6 @@ CREATE TABLE public.user_profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Trigger per update automatico timestamp
-CREATE OR REPLACE FUNCTION update_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
 CREATE TRIGGER user_profiles_updated_at
 BEFORE UPDATE ON user_profiles
 FOR EACH ROW EXECUTE FUNCTION update_updated_at();
@@ -94,8 +117,8 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TABLE public.finance_states (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  state_data JSONB NOT NULL, -- Tutto lo stato React in JSON
-  is_current BOOLEAN DEFAULT TRUE, -- Flag per stato attivo
+  state_data JSONB NOT NULL,
+  is_current BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -123,109 +146,18 @@ CREATE UNIQUE INDEX idx_snapshots_user_date
 ON finance_snapshots(user_id, snapshot_date);
 
 -- ============================================
--- TABELLE NORMALIZZATE (opzionale, per query complesse)
+-- ROW LEVEL SECURITY (RLS)
 -- ============================================
-
--- Asset (immobili, titoli, etf...)
-CREATE TABLE public.assets (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  asset_type TEXT NOT NULL, -- 'immobile', 'obbligazione', 'etf', 'azione', 'deposito', 'metallo'
-  title TEXT NOT NULL,
-  value NUMERIC(12,2) NOT NULL,
-  quantity NUMERIC(12,4), -- per azioni/ETF
-  purchase_price NUMERIC(12,2),
-  metadata JSONB, -- dati specifici per tipo (ISIN, ticker, indirizzo...)
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX idx_assets_user_type ON assets(user_id, asset_type);
-
--- Cashflows legati ad asset
-CREATE TABLE public.asset_cashflows (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  asset_id UUID REFERENCES assets(id) ON DELETE CASCADE,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  cashflow_type TEXT NOT NULL, -- 'income' | 'expense'
-  title TEXT NOT NULL,
-  amount NUMERIC(10,2) NOT NULL,
-  frequency TEXT NOT NULL, -- 'monthly', 'quarterly', 'semiannually', 'yearly'
-  start_date DATE NOT NULL,
-  next_due_date DATE NOT NULL,
-  auto_generate BOOLEAN DEFAULT TRUE,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX idx_cashflows_asset ON asset_cashflows(asset_id);
-CREATE INDEX idx_cashflows_next_due ON asset_cashflows(user_id, next_due_date) 
-WHERE auto_generate = TRUE AND is_active = TRUE;
-
--- Entrate generate (linkate a cashflow o manuali)
-CREATE TABLE public.income_entries (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  amount NUMERIC(10,2) NOT NULL,
-  entry_date DATE NOT NULL,
-  category TEXT, -- 'stipendio', 'bonus', 'investimenti', 'altro'
-  source_type TEXT, -- 'manual', 'cashflow', 'stipendio'
-  source_id UUID, -- link a asset_cashflows se auto-generato
-  metadata JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX idx_income_user_date ON income_entries(user_id, entry_date DESC);
-
--- Uscite
-CREATE TABLE public.expense_entries (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  amount NUMERIC(10,2) NOT NULL,
-  entry_date DATE NOT NULL,
-  category TEXT, -- 'affitto', 'utenze', 'cibo', 'altro'
-  is_recurring BOOLEAN DEFAULT FALSE,
-  source_type TEXT,
-  source_id UUID,
-  metadata JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX idx_expense_user_date ON expense_entries(user_id, entry_date DESC);
-
--- Progetti extra
-CREATE TABLE public.projects (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  description TEXT,
-  potential_income NUMERIC(10,2),
-  costs NUMERIC(10,2),
-  roi NUMERIC(5,2), -- calcolato
-  status TEXT DEFAULT 'idea', -- 'idea', 'in_progress', 'completed', 'abandoned'
-  progress INTEGER DEFAULT 0, -- 0-100
-  metadata JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ============================================
--- ROW LEVEL SECURITY (RLS) - FONDAMENTALE
--- ============================================
-
--- Abilita RLS su tutte le tabelle
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE finance_states ENABLE ROW LEVEL SECURITY;
 ALTER TABLE finance_snapshots ENABLE ROW LEVEL SECURITY;
-ALTER TABLE assets ENABLE ROW LEVEL SECURITY;
-ALTER TABLE asset_cashflows ENABLE ROW LEVEL SECURITY;
-ALTER TABLE income_entries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE expense_entries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 
--- Policy: ogni utente vede solo i propri dati
+-- Policies: ogni utente vede solo i propri dati
+CREATE POLICY "Users can insert their own profile"
+  ON user_profiles FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = id);
+
 CREATE POLICY "Users can view own profile"
   ON user_profiles FOR SELECT
   USING (auth.uid() = id);
@@ -242,30 +174,65 @@ CREATE POLICY "Users can view own snapshots"
   ON finance_snapshots FOR ALL
   USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can manage own assets"
-  ON assets FOR ALL
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can manage own cashflows"
-  ON asset_cashflows FOR ALL
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can manage own income"
-  ON income_entries FOR ALL
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can manage own expenses"
-  ON expense_entries FOR ALL
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can manage own projects"
-  ON projects FOR ALL
-  USING (auth.uid() = user_id);
+-- ✅ Aspetta "Success. No rows returned"
 ```
+
+#### **STEP 3: Ricrea le Policies** ✅
+Se ricevi un errore `new row violates row-level security policy`, esegui questa NUOVA query:
+
+```sql
+-- ============ STEP 3: RICREA LE POLICIES SE NECESSARIO ============
+
+-- Rimuovi le policies vecchie
+DROP POLICY IF EXISTS "Users can insert their own profile" ON user_profiles;
+DROP POLICY IF EXISTS "Users can view own profile" ON user_profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON user_profiles;
+DROP POLICY IF EXISTS "Users can view own finance states" ON finance_states;
+DROP POLICY IF EXISTS "Users can view own snapshots" ON finance_snapshots;
+
+-- Ricrea le policies CORRETTE
+CREATE POLICY "Users can insert their own profile"
+  ON user_profiles FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Users can view own profile"
+  ON user_profiles FOR SELECT
+  USING (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile"
+  ON user_profiles FOR UPDATE
+  USING (auth.uid() = id);
+
+CREATE POLICY "Users can view own finance states"
+  ON finance_states FOR ALL
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own snapshots"
+  ON finance_snapshots FOR ALL
+  USING (auth.uid() = user_id);
+
+-- ✅ Aspetta "Success. No rows returned"
+```
+
+**✅ DATABASE CREATO CON SUCCESSO!**
 
 ---
 
-## 🔐 **FASE 3: Migrazione Auth**
+## ⚠️ Errore: "Email rate limit exceeded"
+
+**Cosa significa?** Supabase permette un numero limitato di tentativi di registrazione con la stessa email nel free tier. Se hai provato a registrare la stessa email tante volte, viene bloccato temporaneamente.
+
+**Soluzione:**
+- ✅ Aspetta **5-10 minuti**
+- ✅ Poi riprova la registrazione con un'**email DIVERSA** (es: `test2@example.com`)
+- ✅ Usa una **password lunga** (almeno 8 caratteri con lettere, numeri, simboli)
+
+**Nota:** Non è un vero problema - è solo protezione anti-spam di Supabase.
+
+---
+
+## 🔐 **FASE 3: Migrazione Auth** ✅ COMPLETATO
 
 ### **3.1 Nuovo AuthContext con Supabase**
 
