@@ -97,7 +97,7 @@ const BackButton = ({ collapsed, onClick }) => {
   }
 
   return (
-    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', borderRadius: 8, border: 'none', background: 'var(--accent-cyan)', color: 'var(--bg-dark)', cursor: 'pointer', fontWeight: 'bold', fontSize: 16 }}>← Indietro</button>
+    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', borderRadius: 8, border: 'none', background: 'var(--accent-cyan)', color: 'var(--bg-dark)', cursor: 'pointer', fontWeight: 'bold', fontSize: 16 }}>Home</button>
   );
 };
 

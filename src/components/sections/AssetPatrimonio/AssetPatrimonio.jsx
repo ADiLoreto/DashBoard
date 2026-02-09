@@ -7,6 +7,8 @@ import BigTab from '../../ui/BigTab';
 import AssetWizard from '../../wizard/AssetWizard';
 import { calculateNetIncome, calculateROI, calculatePayback } from '../../../utils/calculations';
 import ExpensesPopup from '../../ui/ExpensesPopup';
+import AssetManagementPopup from '../../ui/AssetManagementPopup';
+import { getAssetsByType, createAssetHandlers } from '../../../utils/assetHelpers';
 import { PieChart, Pie, Cell } from 'recharts';
 
 // animated inline SVG donut chart: items (array), getValue(item) -> number
@@ -185,22 +187,6 @@ const AssetPatrimonio = () => {
   const [showEditImmobile, setShowEditImmobile] = useState(false);
   const [newImmobile, setNewImmobile] = useState({ titolo: '', valore: '' });
   const [editingImmobile, setEditingImmobile] = useState(null);
-  // Expenses popup state for immobili
-  const [expensesFor, setExpensesFor] = useState(null);
-
-  const handleOpenExpenses = (asset) => {
-    setExpensesFor(asset);
-  };
-  const handleCloseExpenses = () => setExpensesFor(null);
-  const handleSaveExpenses = (data) => {
-    // data: { expenses: [...], taxRate, yearlyRent }
-    if (!expensesFor) { setExpensesFor(null); return; }
-    const updated = { ...expensesFor, ...data };
-    dispatch({ type: 'UPDATE_PATRIMONIO_IMMOBILE', payload: updated });
-    // auto-generate cashflows for assets affected by this change
-    dispatch({ type: 'GENERATE_CASHFLOWS_FROM_ASSETS' });
-    setExpensesFor(null);
-  };
 
   // global Escape key handler: when any "add" modal is open, ESC cancels it
   React.useEffect(() => {
@@ -241,6 +227,54 @@ const AssetPatrimonio = () => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [showAddModal, showAddImmobile, showAddBuono, showAddAzione, showAddEtf, showAddCrypto, showAddOro, showAddObbligazioni, showAddFondi, showAddPolizze, showAddBassoRischio, showWizard, showEditModal, showEditImmobile, showEditBuono, showEditAzione, showEditEtf, showEditCrypto, showEditOro, showEditObbligazioni, showEditFondi, showEditPolizze, showEditBassoRischio]);
 
+  // ========== UNIVERSAL ASSET MANAGEMENT POPUP STATE ==========
+  const [assetPopup, setAssetPopup] = useState({
+    isOpen: false,
+    assetType: null,
+    asset: null
+  });
+
+  // Handlers per il popup universale
+  const handleOpenAssetPopup = (assetType, asset = null) => {
+    setAssetPopup({
+      isOpen: true,
+      assetType,
+      asset
+    });
+  };
+
+  const handleCloseAssetPopup = () => {
+    setAssetPopup({ isOpen: false, assetType: null, asset: null });
+  };
+
+  const handleSaveAsset = (assetData) => {
+    console.log('handleSaveAsset ricevuto:', assetData);
+    const { assetType } = assetPopup;
+    const handlers = createAssetHandlers(assetType, dispatch);
+    
+    if (assetData.id) {
+      // Update existing
+      handlers.handleEdit(assetData);
+    } else {
+      // Add new
+      handlers.handleAdd(assetData);
+    }
+
+    // Auto-generate cashflows for assets that support it
+    dispatch({ type: 'GENERATE_CASHFLOWS_FROM_ASSETS' });
+    handleCloseAssetPopup();
+  };
+
+  const handleDeleteAsset = () => {
+    const { assetType, asset } = assetPopup;
+    if (!asset || !asset.id) return;
+    
+    const handlers = createAssetHandlers(assetType, dispatch);
+    handlers.handleDelete(asset.id);
+    
+    dispatch({ type: 'GENERATE_CASHFLOWS_FROM_ASSETS' });
+    handleCloseAssetPopup();
+  };
 
   const handleAddConto = () => {
     if (!newConto.titolo) return;
@@ -365,17 +399,15 @@ const AssetPatrimonio = () => {
   const handleUpdateBassoRischio = () => { dispatch({ type: 'UPDATE_INVESTIMENTO_BASSORISCHIO', payload: editingBassoRischio }); setShowEditBassoRischio(false); setEditingBassoRischio(null); };
   const handleDeleteBassoRischio = (id) => { dispatch({ type: 'DELETE_INVESTIMENTO_BASSORISCHIO', payload: { id } }); setShowEditBassoRischio(false); setEditingBassoRischio(null); };
 
-  // Wizard handlers: open wizard for create/edit and save callback (FASE 3.1 / 3.2)
+  // Wizard handlers: now using universal popup instead
   const handleAddAsset = (assetType) => {
-    setWizardAssetType(assetType);
-    setWizardAsset(null);
-    setShowWizard(true);
+    // Use universal popup instead of wizard
+    handleOpenAssetPopup(assetType);
   };
 
   const handleEditAsset = (asset, assetType) => {
-    setWizardAssetType(assetType);
-    setWizardAsset(asset);
-    setShowWizard(true);
+    // Use universal popup instead of wizard
+    handleOpenAssetPopup(assetType, asset);
   };
 
   const handleSaveFromWizard = (assetData) => {
@@ -471,10 +503,10 @@ const AssetPatrimonio = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                   <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
                     <h3 onClick={() => toggleCard(key)} style={{ color: 'var(--bg-light)', margin: 0, cursor: 'pointer', textAlign: 'center', fontSize: 22, fontWeight: 700 }}>Conti Deposito</h3>
-                    <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6, textAlign: 'center', fontSize: 20 }}>{formatCurrency(conti.reduce((s,c)=>s+Number(c.saldo||0),0), currency)}</div>
+                    <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6, textAlign: 'center', fontSize: 20 }}>{formatCurrency(conti.reduce((s,c)=>s+Number(c.valore||0),0), currency)}</div>
                   </div>
                   <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 12 }}>
-                    <DonutChart items={conti} getValue={c => Number(c.saldo || 0)} size={180} responsive={true} offsetX={-5} offsetY={-5} />
+                    <DonutChart items={conti} getValue={c => Number(c.valore || 0)} size={180} responsive={true} offsetX={-5} offsetY={-5} />
                   </div>
                 </div>
 
@@ -486,17 +518,18 @@ const AssetPatrimonio = () => {
                         <BigTab
                         key={c.id}
                         title={c.titolo || c.name || 'Conto'}
-                        value={c.saldo}
+                        value={c.valore}
                         titleStyle={{ fontSize: 22 }}
                         valueStyle={{ fontSize: 20, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
                         onUpdate={update => {
                           if (update.title !== undefined) dispatch({ type: 'UPDATE_PATRIMONIO_CONTO', payload: { ...c, titolo: update.title } });
-                          if (update.value !== undefined) dispatch({ type: 'UPDATE_PATRIMONIO_CONTO', payload: { ...c, saldo: Number(update.value) } });
+                          if (update.value !== undefined) dispatch({ type: 'UPDATE_PATRIMONIO_CONTO', payload: { ...c, valore: Number(update.value) } });
                         }}
                         onDelete={() => handleDeleteConto(c.id)}
+                        onEditCashflow={() => handleOpenAssetPopup('conti', c)}
                       />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => handleAddAsset('conti')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
+                    <div className="big-tab add-tab" onClick={() => handleOpenAssetPopup('conti')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -517,7 +550,7 @@ const AssetPatrimonio = () => {
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                   <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
-                    <h3 onClick={() => toggleCard(key)} style={{ color: 'var(--bg-light)', margin: 0, cursor: 'pointer', textAlign: 'center', fontSize: 22, fontWeight: 700 }}>Buoni / Titoli</h3>
+                    <h3 onClick={() => toggleCard(key)} style={{ color: 'var(--bg-light)', margin: 0, cursor: 'pointer', textAlign: 'center', fontSize: 22, fontWeight: 700 }}>Buoni fruttiferi</h3>
                     <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6, textAlign: 'center', fontSize: 20 }}>{formatCurrency(buoni.reduce((s,b)=>s+getValue(b),0), currency)}</div>
                   </div>
                   <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 12 }}>
@@ -539,9 +572,10 @@ const AssetPatrimonio = () => {
                           if (update.value !== undefined) dispatch({ type: 'UPDATE_BUONO_TITOLO', payload: { ...b, importo: Number(update.value) } });
                         }}
                         onDelete={() => handleDeleteBuono(b.id)}
+                        onEditCashflow={() => handleOpenAssetPopup('buoni', b)}
                       />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => handleAddAsset('buoni')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
+                    <div className="big-tab add-tab" onClick={() => handleOpenAssetPopup('buoni')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -601,7 +635,6 @@ const AssetPatrimonio = () => {
                             }}
                             onDelete={() => handleDeleteImmobile(i.id)}
                             onEditCashflow={() => handleEditAsset(i, 'immobili')}
-                            onExpensesClick={() => handleOpenExpenses(i)}
                             roiDetails={{
                               roi: isNaN(roi) ? '0.00' : Number(roi).toFixed(2),
                               income: isNaN(income) ? '0.00' : Number(income).toFixed(2),
@@ -653,9 +686,10 @@ const AssetPatrimonio = () => {
                           if (update.value !== undefined) dispatch({ type: 'UPDATE_INVESTIMENTO_AZIONE', payload: { ...a, valore: Number(update.value) } });
                         }}
                         onDelete={() => handleDeleteAzione(a.id)}
+                        onEditCashflow={() => handleOpenAssetPopup('azioni', a)}
                       />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => handleAddAsset('azioni')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
+                    <div className="big-tab add-tab" onClick={() => handleOpenAssetPopup('azioni')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -697,9 +731,10 @@ const AssetPatrimonio = () => {
                           if (update.value !== undefined) dispatch({ type: 'UPDATE_INVESTIMENTO_ETF', payload: { ...e, valore: Number(update.value) } });
                         }}
                         onDelete={() => handleDeleteEtf(e.id)}
+                        onEditCashflow={() => handleOpenAssetPopup('etf', e)}
                       />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => handleAddAsset('etf')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
+                    <div className="big-tab add-tab" onClick={() => handleOpenAssetPopup('etf')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -741,9 +776,10 @@ const AssetPatrimonio = () => {
                           if (update.value !== undefined) dispatch({ type: 'UPDATE_INVESTIMENTO_CRYPTO', payload: { ...c, valore: Number(update.value) } });
                         }}
                         onDelete={() => handleDeleteCrypto(c.id)}
+                        onEditCashflow={() => handleOpenAssetPopup('crypto', c)}
                       />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => handleAddAsset('crypto')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
+                    <div className="big-tab add-tab" onClick={() => handleOpenAssetPopup('crypto')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -752,49 +788,7 @@ const AssetPatrimonio = () => {
             );
           })()}
 
-          {(() => {
-            const key = 'oro';
-            const open = isCardOpen(key);
-            return (
-              <div
-                onMouseEnter={() => setHoveredCard(key)}
-                onMouseLeave={() => setHoveredCard(null)}
-                style={{ background: 'var(--bg-medium)', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, minHeight: open ? 320 : undefined, aspectRatio: open ? undefined : '1 / 1', transition: 'min-height 220ms ease, aspect-ratio 220ms ease' }}
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                  <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
-                    <h3 onClick={() => toggleCard(key)} style={{ color: 'var(--bg-light)', margin: 0, cursor: 'pointer', textAlign: 'center', fontSize: 22, fontWeight: 700 }}>Materiali preziosi</h3>
-                    <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginTop: 6, textAlign: 'center', fontSize: 20 }}>{formatCurrency(oro.reduce((s,o)=>s+getValue(o),0), currency)}</div>
-                  </div>
-                  <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 12 }}>
-                    <DonutChart items={oro} getValue={getValue} size={180} responsive={true} offsetX={-5} offsetY={-5} />
-                  </div>
-                </div>
-                <div style={{ marginTop: 12, display: open ? 'flex' : 'none', flexDirection: 'column', gap: 12, overflowY: 'auto', paddingBottom: 8 }}>
-                  {/* ...DonutChart rimosso dalla sezione espansa... */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
-                    {oro.map(o => (
-                      <BigTab
-                        key={o.id}
-                        title={o.titolo || o.name || 'Oro'}
-                        value={o.valore}
-                        titleStyle={{ fontSize: 22 }}
-                        valueStyle={{ fontSize: 20, fontFamily: 'inherit', color: 'var(--accent-cyan)', fontWeight: 700 }}
-                        onUpdate={update => {
-                          if (update.title !== undefined) dispatch({ type: 'UPDATE_ORO', payload: { ...o, titolo: update.title } });
-                          if (update.value !== undefined) dispatch({ type: 'UPDATE_ORO', payload: { ...o, valore: Number(update.value) } });
-                        }}
-                        onDelete={() => handleDeleteOro(o.id)}
-                      />
-                    ))}
-                    <div className="big-tab add-tab" onClick={() => handleAddAsset('oro')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
-                      <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
+          {/* Materiali preziosi temporaneamente nascosti */}
 
           {/* Obbligazioni card */}
           {(() => {
@@ -830,9 +824,10 @@ const AssetPatrimonio = () => {
                           if (update.value !== undefined) dispatch({ type: 'UPDATE_INVESTIMENTO_OBBLIGAZIONI', payload: { ...o, valore: Number(update.value) } });
                         }}
                         onDelete={() => handleDeleteObbligazioni(o.id)}
+                        onEditCashflow={() => handleOpenAssetPopup('obbligazioni', o)}
                       />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => handleAddAsset('obbligazioni')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
+                    <div className="big-tab add-tab" onClick={() => handleOpenAssetPopup('obbligazioni')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -875,9 +870,10 @@ const AssetPatrimonio = () => {
                           if (update.value !== undefined) dispatch({ type: 'UPDATE_INVESTIMENTO_FONDI', payload: { ...f, valore: Number(update.value) } });
                         }}
                         onDelete={() => handleDeleteFondi(f.id)}
+                        onEditCashflow={() => handleOpenAssetPopup('fondi', f)}
                       />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => handleAddAsset('fondi')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
+                    <div className="big-tab add-tab" onClick={() => handleOpenAssetPopup('fondi')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -920,9 +916,10 @@ const AssetPatrimonio = () => {
                           if (update.value !== undefined) dispatch({ type: 'UPDATE_INVESTIMENTO_POLIZZE', payload: { ...p, valore: Number(update.value) } });
                         }}
                         onDelete={() => handleDeletePolizze(p.id)}
+                        onEditCashflow={() => handleOpenAssetPopup('polizze', p)}
                       />
                     ))}
-                    <div className="big-tab add-tab" onClick={() => handleAddAsset('polizze')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
+                    <div className="big-tab add-tab" onClick={() => handleOpenAssetPopup('polizze')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
                       <span style={{ fontSize: 48, color: 'var(--accent-cyan)' }}>+</span>
                     </div>
                   </div>
@@ -965,6 +962,7 @@ const AssetPatrimonio = () => {
                           if (update.value !== undefined) dispatch({ type: 'UPDATE_INVESTIMENTO_BASSORISCHIO', payload: { ...b, valore: Number(update.value) } });
                         }}
                         onDelete={() => handleDeleteBassoRischio(b.id)}
+                        onEditCashflow={() => handleOpenAssetPopup('bassoRischio', b)}
                       />
                     ))}
                     <div className="big-tab add-tab" onClick={() => handleAddAsset('bassoRischio')} style={{ background: 'var(--bg-light)', color: 'var(--text-muted)', border: '2px dashed var(--bg-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 220, minHeight: 120, borderRadius: 12, cursor: 'pointer', padding: 12, fontSize: 36 }}>
@@ -989,15 +987,7 @@ const AssetPatrimonio = () => {
           />
         )}
 
-        {/* Expenses popup for immobili (gestione spese / ROI) */}
-        {expensesFor && (
-          <ExpensesPopup
-            isOpen={!!expensesFor}
-            initialData={expensesFor}
-            onClose={handleCloseExpenses}
-            onSave={handleSaveExpenses}
-          />
-        )}
+        {/* Expenses popup for immobili (gestione spese / ROI) - REMOVED, now in popup modifica */}
 
         {/* Add modal */}
         {showAddModal && (
@@ -1323,6 +1313,18 @@ const AssetPatrimonio = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Universal Asset Management Popup */}
+        {assetPopup.isOpen && (
+          <AssetManagementPopup
+            isOpen={assetPopup.isOpen}
+            assetType={assetPopup.assetType}
+            initialData={assetPopup.asset}
+            onSave={handleSaveAsset}
+            onDelete={handleDeleteAsset}
+            onClose={handleCloseAssetPopup}
+          />
         )}
       </div>
     </div>

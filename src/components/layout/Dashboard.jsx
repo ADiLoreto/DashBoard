@@ -20,6 +20,7 @@ const Dashboard = (props) => {
   const { activeSection, setActiveSection } = props;
   const { user } = useAuth();
   const userId = user?.id;
+  const userUsername = user?.username;
   const { dirty, markSaved, state, loading, saveCurrentSnapshot, loadSnapshotHistory } = useContext(FinanceContext);
 
   // ========== STATI ==========
@@ -32,12 +33,13 @@ const Dashboard = (props) => {
   const [showDraftMsg, setShowDraftMsg] = useState(false);
   const [draftSummary, setDraftSummary] = useState([]);
   const [draftDebug, setDraftDebug] = useState(null);
+  const [showDraftDetails, setShowDraftDetails] = useState(false);
   const [saveConfirm, setSaveConfirm] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [previewDiffs, setPreviewDiffs] = useState([]);
   const [previewPayload, setPreviewPayload] = useState(null);
   const [previewOnSaved, setPreviewOnSaved] = useState(null);
-  const [visibleSeries, setVisibleSeries] = useState({ tfr: true, conti: true, buoni: true, azioni: true, etf: true, crypto: true, oro: true });
+  const [visibleSeries, setVisibleSeries] = useState({ tfr: true, conti: true, buoni: true, azioni: true, etf: true, crypto: true });
   const [visibleLiquidita, setVisibleLiquidita] = useState({ conti: true, carte: true, altro: true });
 
   const canonicalizeDate = (d) => d ? String(d).slice(0,10) : '';
@@ -199,12 +201,13 @@ const Dashboard = (props) => {
   // reload user settings whenever userId or tick changes
   React.useEffect(() => {
     try {
-      const raw = localStorage.getItem(userId ? `user_settings_${userId}` : 'user_settings');
+      const keyFor = (username) => (username ? `user_settings_${username}` : 'user_settings');
+      const raw = localStorage.getItem(keyFor(userUsername));
       setUserSettings(raw ? JSON.parse(raw) : {});
     } catch (e) {
       setUserSettings({});
     }
-  }, [userId, tick]);
+  }, [userUsername, tick]);
 
   // reload history when userId or tick changes
   React.useEffect(() => {
@@ -281,9 +284,6 @@ const Dashboard = (props) => {
                 // Detailed debug: if patrimonio differs and there are real changed keys, keep detailed objects for inspection in UI
                 try {
                   if (sec === 'patrimonio' && changed.length > 0) {
-                    console.warn('DEBUG DRAFT DIFF - patrimonio detected mismatch');
-                    try { console.log('DEBUG payloadState.patrimonio:', JSON.parse(JSON.stringify(a))); } catch(e) {}
-                    try { console.log('DEBUG state.patrimonio:', JSON.parse(JSON.stringify(b))); } catch(e) {}
                     setDraftDebug({ payload: a, state: b });
                   }
                 } catch (e) { /* ignore debug errors */ }
@@ -371,10 +371,9 @@ const Dashboard = (props) => {
   const azioni = (st?.patrimonio?.investimenti?.azioni || []).reduce((s, a) => s + (a.valore || 0), 0);
   const etf = (st?.patrimonio?.investimenti?.etf || []).reduce((s, e) => s + (e.valore || 0), 0);
   const crypto = (st?.patrimonio?.investimenti?.crypto || []).reduce((s, c) => s + (c.valore || 0), 0);
-  const oro = (st?.patrimonio?.investimenti?.oro || []).reduce((s, o) => s + (o.valore || 0), 0);
 
-  const patrimonio = tfr + conti + buoni + azioni + etf + crypto + oro;
-  return { date, tfr, conti, buoni, azioni, etf, crypto, oro, patrimonio };
+  const patrimonio = tfr + conti + buoni + azioni + etf + crypto;
+  return { date, tfr, conti, buoni, azioni, etf, crypto, patrimonio };
   };
 
   // build liquidita breakdown from snapshot using canonical fields only
@@ -831,7 +830,6 @@ const Dashboard = (props) => {
             {visibleSeries.azioni && <Area type="monotone" dataKey="azioni" stroke="#8e44ad" fill="rgba(142,68,173,0.06)" stackId="patrimonio" name="Azioni" />}
             {visibleSeries.etf && <Area type="monotone" dataKey="etf" stroke="#16a085" fill="rgba(22,160,133,0.06)" stackId="patrimonio" name="ETF" />}
             {visibleSeries.crypto && <Area type="monotone" dataKey="crypto" stroke="#d35400" fill="rgba(211,84,0,0.06)" stackId="patrimonio" name="Crypto" />}
-            {visibleSeries.oro && <Area type="monotone" dataKey="oro" stroke="#b7950b" fill="rgba(183,149,11,0.06)" stackId="patrimonio" name="Oro" />}
             {/* total line intentionally removed; chart shows component series */}
           </AreaChart>
         </ResponsiveContainer>
@@ -845,7 +843,6 @@ const Dashboard = (props) => {
             { key: 'azioni', label: 'Azioni', color: '#8e44ad' },
             { key: 'etf', label: 'ETF', color: '#16a085' },
             { key: 'crypto', label: 'Crypto', color: '#d35400' },
-            { key: 'oro', label: 'Oro', color: '#b7950b' },
           ].map(s => {
             const on = !!visibleSeries[s.key];
             return (
