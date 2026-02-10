@@ -288,29 +288,55 @@ const BigTab = ({
       {roiDetails && (
         <div style={{
           position: 'absolute',
-          bottom: subtitle ? 32 : 12,
+          bottom: subtitle ? -62 : -42,
           left: 12,
           right: 12,
           display: 'flex',
-          justifyContent: 'space-between',
-          color: 'var(--text-muted)',
-          fontSize: 13,
-          padding: '4px 8px',
+          flexDirection: 'column',
+          gap: 8,
           backgroundColor: 'var(--bg-darker)',
-          borderRadius: '4px'
+          borderRadius: '4px',
+          padding: '8px'
         }}>
-          <span>ROI: {roiDetails.roi}%</span>
-          <span>Rendita: €{roiDetails.income}</span>
-          <span>
-            Payback: {
-              (function(p) {
-                const n = Number(p);
-                if (!isFinite(n)) return '∞';
-                if (isNaN(n)) return '—';
-                return n.toFixed(2);
-              })(roiDetails.payback)
-            } anni
-          </span>
+          {/* Prima riga: ROI, Rendita, Payback */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            color: 'var(--text-muted)',
+            fontSize: 12,
+            gap: 4
+          }}>
+            <span title="ROI Netto">ROI: {roiDetails.roi}%</span>
+            <span title="Rendita Netta Annuale">Rendita: €{roiDetails.income}</span>
+            <span title="Anni per rientrare dell'investimento">
+              Payback: {
+                (function(p) {
+                  const n = Number(p);
+                  if (!isFinite(n)) return '∞';
+                  if (isNaN(n)) return '—';
+                  return n.toFixed(2);
+                })(roiDetails.payback)
+              } anni
+            </span>
+          </div>
+          
+          {/* Seconda riga: metriche aggiuntive se disponibili */}
+          {(roiDetails.totalSpese !== undefined || roiDetails.renditaLorda !== undefined || roiDetails.roiLordo !== undefined) && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              color: 'var(--text-muted)',
+              fontSize: 11,
+              gap: 4,
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              paddingTop: 6
+            }}>
+              {roiDetails.totalSpese !== undefined && <span title="Totale Spese Annuali">Spese: €{Number(roiDetails.totalSpese).toFixed(0)}</span>}
+              {roiDetails.renditaLorda !== undefined && <span title="Rendita Lorda Annuale">R.Lorda: €{Number(roiDetails.renditaLorda).toFixed(0)}</span>}
+              {roiDetails.roiLordo !== undefined && <span title="ROI Lordo">R.Lordo: {Number(roiDetails.roiLordo).toFixed(2)}%</span>}
+              {roiDetails.capitalGain !== undefined && roiDetails.capitalGain !== 0 && <span title="Capital Gain">Gain: €{Number(roiDetails.capitalGain).toFixed(0)}</span>}
+            </div>
+          )}
         </div>
       )}
 

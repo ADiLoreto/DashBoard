@@ -31,6 +31,96 @@ export const calculatePayback = (monthlyRent, expenses, taxRate, propertyValue) 
   return value / netIncome; // anni per rientrare
 };
 
+// Calcola le metriche di performance complete per immobili
+export const calculatePropertyPerformance = (yearlyRent, expenses, taxRate, propertyValue) => {
+  const totalExpenses = (expenses || []).reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+  const yearlyRentNum = Number(yearlyRent) || 0;
+  const propertyValueNum = Number(propertyValue) || 1;
+  
+  // Rendita lorda (affitto annuo)
+  const renditaLorda = yearlyRentNum * 12;
+  
+  // Tasse sulla rendita
+  const tasse = (renditaLorda * (Number(taxRate) || 0)) / 100;
+  
+  // Rendita netta
+  const renditaNetta = renditaLorda - totalExpenses - tasse;
+  
+  // ROI Lordo
+  const roiLordo = (renditaLorda / propertyValueNum) * 100;
+  
+  // ROI Netto
+  const roiNetto = (renditaNetta / propertyValueNum) * 100;
+  
+  // Capital Gain (0 se non specificato, poiché è confronto tra valore attuale e di acquisto)
+  const capitalGain = 0;
+  
+  // Capital Gain Percent
+  const capitalGainPercent = 0;
+  
+  return {
+    totalSpese: totalExpenses,
+    renditaLorda,
+    renditaNetta,
+    roiLordo,
+    roiNetto,
+    capitalGain,
+    capitalGainPercent
+  };
+};
+
+// Calcola le metriche di performance per immobili usando i campi completi
+export const calculatePropertyPerformanceFromData = (data) => {
+  if (!data) return {};
+  
+  // Calcolo totalSpese
+  const imu = Number(data.imu) || 0;
+  const tasi = Number(data.tasi) || 0;
+  const cond = (Number(data.condominioMensile) || 0) * 12;
+  const maint = Number(data.manutenzioneAnnua) || 0;
+  const assic = Number(data.assicurazione) || 0;
+  const totalSpese = imu + tasi + cond + maint + assic;
+  
+  // Calcolo renditaLorda
+  const affitto = Number(data.affittoMensile) || 0;
+  const freq = data.frequenzaAffitto || 'mensile';
+  const multiplier = { mensile: 12, trimestrale: 4, annuale: 1 };
+  const renditaLorda = affitto * (multiplier[freq] || 12);
+  
+  // Calcolo tasse
+  const tasse = (renditaLorda * (Number(data.tassazioneAffitto) || 0)) / 100;
+  
+  // Calcolo renditaNetta
+  const renditaNetta = renditaLorda - totalSpese - tasse;
+  
+  // Calcolo valore (usa valoreAttuale se disponibile, altrimenti valore)
+  const valore = Number(data.valoreAttuale) || Number(data.valore) || 1;
+  
+  // Calcolo roiLordo
+  const roiLordo = (renditaLorda / valore) * 100;
+  
+  // Calcolo roiNetto
+  const roiNetto = (renditaNetta / valore) * 100;
+  
+  // Calcolo capitalGain
+  const valoreAttuale = Number(data.valoreAttuale) || Number(data.valore) || 0;
+  const valoreAcquisto = Number(data.valore) || 0;
+  const capitalGain = valoreAttuale - valoreAcquisto;
+  
+  // Calcolo capitalGainPercent
+  const capitalGainPercent = (capitalGain / valoreAcquisto) * 100;
+  
+  return {
+    totalSpese,
+    renditaLorda,
+    renditaNetta,
+    roiLordo,
+    roiNetto,
+    capitalGain,
+    capitalGainPercent
+  };
+};
+
 /**
  * ============================================================
  * CALCOLI OBBLIGAZIONI

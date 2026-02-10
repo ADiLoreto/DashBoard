@@ -5,7 +5,7 @@ import { AuthContext } from '../../../context/AuthContext';
 import { FinanceContext } from '../../../context/FinanceContext';
 import BigTab from '../../ui/BigTab';
 import AssetWizard from '../../wizard/AssetWizard';
-import { calculateNetIncome, calculateROI, calculatePayback } from '../../../utils/calculations';
+import { calculateNetIncome, calculateROI, calculatePayback, calculatePropertyPerformanceFromData } from '../../../utils/calculations';
 import ExpensesPopup from '../../ui/ExpensesPopup';
 import AssetManagementPopup from '../../ui/AssetManagementPopup';
 import { getAssetsByType, createAssetHandlers } from '../../../utils/assetHelpers';
@@ -622,6 +622,7 @@ const AssetPatrimonio = () => {
                         const income = calculateNetIncome(i.yearlyRent || 0, i.expenses || [], i.taxRate || 0);
                         const roi = calculateROI(i.yearlyRent || 0, i.expenses || [], i.taxRate || 0, i.valore || 0);
                         const payback = calculatePayback(i.yearlyRent || 0, i.expenses || [], i.taxRate || 0, i.valore || 0);
+                        const performance = calculatePropertyPerformanceFromData(i);
                         return (
                           <BigTab
                             key={i.id}
@@ -638,7 +639,8 @@ const AssetPatrimonio = () => {
                             roiDetails={{
                               roi: isNaN(roi) ? '0.00' : Number(roi).toFixed(2),
                               income: isNaN(income) ? '0.00' : Number(income).toFixed(2),
-                              payback: payback === Infinity ? Infinity : (isNaN(payback) ? null : Number(payback))
+                              payback: payback === Infinity ? Infinity : (isNaN(payback) ? null : Number(payback)),
+                              ...performance
                             }}
                           />
                         );
