@@ -144,6 +144,7 @@ body {
   position: relative; /* stacking context di default */
   z-index: 20;
   flex-shrink: 0; /* previene che la sidebar si riduca */
+  box-sizing: border-box; /* includi padding nella larghezza */
 }
 .sidebar h1, .sidebar h2, .sidebar h3 {
   color: var(--text-light);
@@ -159,6 +160,12 @@ body {
 .sidebar a:hover {
   color: var(--accent-cyan);
 }
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
 /* Horizontal container: impedisce wrapping verticale su viewport stretti (Task 37 - Opzione 1) */
 .horizontal-container {
   display: flex;

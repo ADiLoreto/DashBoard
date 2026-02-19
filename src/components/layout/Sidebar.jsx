@@ -45,7 +45,7 @@ const Sidebar = ({ onSelect, selected, onBack }) => {
       className="sidebar"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      style={{ width: collapsed ? 64 : 220, transition: 'width 220ms ease', overflow: 'hidden' }}
+      style={{ width: collapsed ? 80 : 280, transition: 'width 220ms ease', overflow: 'hidden' }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 10px' }}>
         <h2 style={{ margin: 0, fontSize: collapsed ? 16 : 20 }}>{collapsed ? 'DB' : 'Dashboard'}</h2>
