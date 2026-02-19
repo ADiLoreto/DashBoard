@@ -1,0 +1,5 @@
+# Normalize line endings across platforms
+* text=auto
+
+# Force LF for JSON files (keeps package-lock.json normalized)
+*.json text eol=lf
