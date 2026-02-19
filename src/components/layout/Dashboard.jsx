@@ -559,7 +559,7 @@ const Dashboard = (props) => {
   }, [history, state, dateRange, saveDate]);
 
   return (
-    <main style={{ position: 'relative', flex: 1, background: 'var(--bg-dark)', minHeight: '100vh' }}>
+    <main className="main-content" style={{ position: 'relative' }}>
       <div className="topbar" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <h1 style={{ margin: 0 }}>FINANCIAL STATUS DASHBOARD</h1>
         {/* DEBUG: manual trigger per test automatic cashflow */}

@@ -121,8 +121,8 @@
   --donut-vertical-offset: 1px; /* default vertical offset for donut items */
 }
 html {
-  /* Scaling proporzionale per layout FISSO sotto 1415px */
-  font-size: clamp(14px, calc(100vw / 1415 * 16), 16px);
+  /* Layout fisso per 1920px - tablet scala proporzionalmente */
+  font-size: 16px;
 }
 
 body {
@@ -365,5 +365,5 @@ body {
   font-size: 13px;
 }
 
-/* Media query removed - FIXED layout with proportional scaling via font-size clamp() */
+/* Media query removed - FIXED layout with proportional scaling */
 
